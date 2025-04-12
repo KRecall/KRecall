@@ -1,0 +1,37 @@
+CREATE TABLE IF NOT EXISTS OTStorageDBItem (
+    timestamp INTEGER NOT NULL PRIMARY KEY,
+    fileTimestamp INTEGER NOT NULL,
+    mark TEXT DEFAULT NULL
+);
+
+listAllData:
+SELECT * FROM OTStorageDBItem;
+
+listDataWithTimestampRange:
+SELECT * FROM OTStorageDBItem WHERE timestamp BETWEEN ? AND ?;
+
+getData:
+SELECT * FROM OTStorageDBItem WHERE timestamp=?;
+
+-- 获取小于指定时间戳的最近一条记录
+getPreviousData:
+SELECT * FROM OTStorageDBItem
+WHERE timestamp < ?
+ORDER BY timestamp DESC
+LIMIT 1;
+
+
+addNewRecord:
+INSERT INTO OTStorageDBItem (timestamp, fileTimestamp) VALUES (?, ?);
+
+setFileTimestamp:
+UPDATE OTStorageDBItem SET fileTimestamp = ? WHERE timestamp = ?;
+
+markScreenData:
+UPDATE OTStorageDBItem SET mark = ? WHERE timestamp = ?;
+
+listTimestampWithMark:
+SELECT timestamp FROM OTStorageDBItem WHERE mark = ?;
+
+listTimestampWithNotMark:
+SELECT timestamp FROM OTStorageDBItem WHERE mark != ?;

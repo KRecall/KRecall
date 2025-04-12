@@ -1,0 +1,126 @@
+CREATE TABLE IF NOT EXISTS DataItem (
+    screenId INTEGER NOT NULL DEFAULT 0,
+    timestamp INTEGER NOT NULL PRIMARY KEY,
+    data TEXT DEFAULT NULL,
+    -- 0: not processed, 1: processed, 2: error
+    status INTEGER NOT NULL DEFAULT 0,
+    error TEXT DEFAULT NULL,
+    -- json data string
+    ocr Text DEFAULT NULL,
+    mark TEXT NOT NULL DEFAULT "",
+    appId TEXT DEFAULT NULL,
+    windowTitle TEXT DEFAULT NULL
+);
+
+createTable:
+CREATE TABLE IF NOT EXISTS DataItem (
+    screenId INTEGER NOT NULL DEFAULT 0,
+    timestamp INTEGER NOT NULL PRIMARY KEY,
+    data TEXT DEFAULT NULL,
+    -- 0: not processed, 1: processed, 2: error
+    status INTEGER NOT NULL DEFAULT 0,
+    error TEXT DEFAULT NULL,
+    -- json data string
+    ocr Text DEFAULT NULL,
+    mark TEXT NOT NULL DEFAULT "",
+    appId TEXT DEFAULT NULL,
+    windowTitle TEXT DEFAULT NULL
+);
+
+
+
+
+-- GetData
+
+----------------WARNING: This action is not recommended.----------------
+listAllData:
+SELECT * FROM DataItem;
+----------------WARNING: This action is not recommended.----------------
+
+getData:
+SELECT * FROM DataItem WHERE timestamp=?;
+
+listNotProcessedData:
+SELECT * FROM DataItem WHERE status=0 OR status=2;
+
+searchDataInAll:
+SELECT * FROM DataItem WHERE (data LIKE ?);
+
+searchDataWithTimeRange:
+SELECT * FROM DataItem WHERE ((timestamp BETWEEN ? AND ?) AND (data LIKE ?));
+
+getLeastTimestamp:
+SELECT timestamp FROM DataItem WHERE status = 0 OR status = 2 ORDER BY timestamp ASC LIMIT 1;
+
+listTimestampWithMark:
+SELECT timestamp FROM DataItem WHERE mark = ?;
+
+listTimestampWithNotMark:
+SELECT timestamp FROM DataItem WHERE mark != ?;
+
+-- ChangeData
+addNewRecord:
+INSERT INTO DataItem (screenId, timestamp, mark, appId, windowTitle) VALUES (?, ?, ?, ?, ?);
+
+setData:
+UPDATE DataItem SET data = ? WHERE timestamp = ?;
+
+processed:
+UPDATE DataItem SET status = 1, error = NULL WHERE timestamp = ?;
+
+setMarkScreenData:
+UPDATE DataItem SET mark = ? WHERE timestamp = ?;
+
+happenError:
+UPDATE DataItem SET status = 2, error = ? WHERE timestamp = ?;
+
+setOCRData:
+UPDATE DataItem SET ocr = ? WHERE timestamp = ?;
+
+
+
+
+-- listAllData:
+-- SELECT * FROM DataItem;
+--
+-- listDataWithTimestampRange:
+-- SELECT * FROM DataItem WHERE timestamp BETWEEN ? AND ?;
+--
+-- getData:
+-- SELECT * FROM DataItem WHERE timestamp=?;
+--
+-- listNotProcessedData:
+-- SELECT * FROM DataItem WHERE status=0 OR status=2;
+--
+-- searchDataInAll:
+-- SELECT * FROM DataItem WHERE (data LIKE ?);
+--
+-- searchDataWithTimeRange:
+-- SELECT * FROM DataItem WHERE ((timestamp BETWEEN ? AND ?) AND (data LIKE ?));
+--
+-- addNewRecord:
+-- INSERT INTO DataItem (timestamp, mark) VALUES (?, "");
+--
+-- appendData:
+-- UPDATE DataItem SET data = ? WHERE timestamp = ?;
+--
+-- processed:
+-- UPDATE DataItem SET status = 1, error = NULL WHERE timestamp = ?;
+--
+-- markScreenData:
+-- UPDATE DataItem SET mark = ? WHERE timestamp = ?;
+--
+-- listTimestampWithMark:
+-- SELECT timestamp FROM DataItem WHERE mark = ?;
+--
+-- listTimestampWithNotMark:
+-- SELECT timestamp FROM DataItem WHERE mark != ?;
+--
+-- happenError:
+-- UPDATE DataItem SET status = 2, error = ? WHERE timestamp = ?;
+--
+-- appendOCRData:
+-- UPDATE DataItem SET ocr = ? WHERE timestamp = ?;
+--
+-- getLeastTimestamp:
+-- SELECT timestamp FROM DataItem WHERE status = 0 OR status = 2 ORDER BY timestamp ASC LIMIT 1;
