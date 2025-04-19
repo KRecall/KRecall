@@ -7,9 +7,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -25,6 +25,8 @@ import io.github.octestx.krecall.GlobalRecalling
 import io.github.octestx.krecall.model.ImageState
 import io.github.octestx.krecall.plugins.PluginManager
 import io.github.octestx.krecall.repository.DataDB
+import io.github.octestx.krecall.utils.DelayShowAnimation
+import io.github.octestx.krecall.utils.StepLoadAnimation
 import io.klogging.noCoLogger
 import kotlinx.coroutines.*
 import models.sqld.DataItem
@@ -34,132 +36,167 @@ class SearchTab(model: SearchPageModel): AbsUIPage<Any?, SearchTab.SearchPageSta
     private val ologger = noCoLogger<SearchTab>()
     @Composable
     override fun UI(state: SearchPageState) {
-        Column {
-            Column {
-                // ✅ 使用派生状态优化条件判断
-                val showResultCount by remember {
-                    derivedStateOf { state.searchResult.isNotEmpty() }
-                }
-                AnimatedVisibility(showResultCount) {
-                    Text("Search result: ${state.searchResult.size}")
-                }
-                Row {
-                    OutlinedTextField(
-                        value = state.searchText,
-                        onValueChange = { state.action(SearchPageAction.ChangeSearchText(it)) },
-                        modifier = Modifier.weight(1f)
-                    )
-                    IconButton(onClick = {
-                        if (state.searchText.isNotBlank()) {
-                            state.action(SearchPageAction.AddTag(state.searchText))
-                            state.action(SearchPageAction.ChangeSearchText("")) // 清空输入
+        MaterialTheme {
+            StepLoadAnimation(4) { step ->
+                Column(Modifier.background(MaterialTheme.colorScheme.background)) {
+                    Column {
+                        // ✅ 使用派生状态优化条件判断
+                        val showResultCount by remember {
+                            derivedStateOf { state.searchResult.isNotEmpty() }
                         }
-                    }) {
-                        Icon(TablerIcons.Send, null)
+                        AnimatedVisibility(showResultCount) {
+                            Text("Search result: ${state.searchResult.size}", color = MaterialTheme.colorScheme.primary)
+                        }
+                        SearchBar(step, state)
+
+                        SearchTagsController(step, state)
+                    }
+                    Row(Modifier.fillMaxSize()) {
+                        LazyVerticalGrid(
+                            GridCells.FixedSize(100.dp),
+                            state = state.lazyGridState,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            items(
+                                state.searchResult,
+                                key = { it.timestamp },
+                                contentType = { "DataItem" }
+                            ) { item ->
+                                SearchItem(state, item)
+                            }
+                        }
+                        VerticalScrollbar(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .background(Color.LightGray.copy(alpha = 0.5f)) // 半透明背景
+                            ,
+                            adapter = rememberScrollbarAdapter(
+                                scrollState = state.lazyGridState,
+                            )
+                        )
                     }
                 }
-
-                Box(modifier = Modifier.height(56.dp)) { // 限制高度避免内容溢出
-                    val lazyListState = rememberLazyListState()
-
-                    HorizontalScrollbar(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .fillMaxWidth(0.9f) // 宽度略小于内容区
-                            .height(8.dp)
-                            .background(Color.Transparent),
-                        adapter = rememberScrollbarAdapter(lazyListState),
-                        style = ScrollbarStyle(
-                            minimalHeight = 16.dp,
-                            thickness = 8.dp,
-                            shape = RoundedCornerShape(4.dp),
-                            hoverDurationMillis = 300,
-                            unhoverColor = Color.Gray.copy(alpha = 0.4f),
-                            hoverColor = Color.DarkGray
-                        )
-                    )
-
+            }
+        }
+    }
+    @Composable
+    private fun SearchTagsController(step: Int, state: SearchPageState) {
+        if (state.tags.isNotEmpty()) {
+            Column(modifier = Modifier.height(56.dp)) { // 限制高度避免内容溢出
+                val lazyListState = rememberLazyListState()
+                if (step >= 3) {
                     LazyRow(
                         state = lazyListState, // 绑定滚动状态
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 4.dp) // 给滚动条留出空间
+                            .weight(1f)
                     ) {
                         items(state.tags) { tag ->
                             ElevatedFilterChip(
                                 selected = false,
                                 onClick = { state.action(SearchPageAction.RemoveTag(tag)) },
-                                label = { Text(text = tag) }
+                                label = { Text(text = tag, color = MaterialTheme.colorScheme.primary) }
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                         }
                     }
                 }
-            }
-            Box {
-                LazyVerticalGrid(GridCells.FixedSize(100.dp), state = state.lazyGridState) {
-                    items(state.searchResult, key = { it.timestamp }, contentType = { "DataItem" }) { item ->
-                        Card(Modifier.padding(6.dp).clickable {
-                            state.action(SearchPageAction.JumpView(item))
-                        }) {
-                            val timestamp = item.timestamp
-                            var imgState: ImageState by rememberSaveable(timestamp) { mutableStateOf(ImageState.Loading) }
-                            when (imgState) {
-                                ImageState.Error -> {
-                                    Text("ERROR!")
-                                }
-                                ImageState.Loading -> {
-                                    CircularProgressIndicator()
-                                }
-                                is ImageState.Success -> {
-                                    AsyncImage((imgState as ImageState.Success).bytes, null, contentScale = ContentScale.FillWidth)
-                                }
-                            }
-                            LaunchedEffect(timestamp) {
-                                if (imgState is ImageState.Success) {
-                                    return@LaunchedEffect
-                                }
-                                if (GlobalRecalling.imageCache.containsKey(timestamp)) {
-                                    imgState = ImageState.Success(GlobalRecalling.imageCache[timestamp]!!)
-                                    return@LaunchedEffect
-                                }
 
-                                imgState = try {
-                                    withContext(GlobalRecalling.imageLoadingDispatcher) {
-                                        val bytes = GlobalRecalling.imageCache.getOrPut(timestamp) {
-                                            PluginManager.getStoragePlugin().getOrNull()
-                                                ?.getScreenData(timestamp)
-                                                ?.getOrNull()
-                                        }
-                                        if (bytes == null) {
-                                            ImageState.Error
-                                        } else {
-                                            ImageState.Success(bytes)
-                                        }
-                                    }
-                                } catch (e: Exception) {
-                                    ImageState.Error
-                                }
-                            }
-
-                            // ✅ 使用派生状态减少文本计算
-                            val displayText by remember(item.data_) {
-                                derivedStateOf { item.data_?.take(150) ?: "NULL" }
-                            }
-                            Text(text = displayText, maxLines = 3)
-                        }
-                    }
-                }
-                VerticalScrollbar(
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd) // 右侧对齐
-                        .fillMaxHeight()
-                        .background(Color.LightGray.copy(alpha = 0.5f)), // 半透明背景
-                    adapter = rememberScrollbarAdapter(
-                        scrollState = state.lazyGridState,
+                if (step >= 4) {
+                    HorizontalScrollbar(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        adapter = rememberScrollbarAdapter(lazyListState),
                     )
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun SearchBar(step: Int, state: SearchPageState) {
+        Row(Modifier.fillMaxWidth()) {
+            if (step >= 1) {
+                OutlinedTextField(
+                    value = state.searchText,
+                    onValueChange = { state.action(SearchPageAction.ChangeSearchText(it)) },
+                    modifier = Modifier.weight(1f)
                 )
             }
+            if (step >= 2) {
+                DelayShowAnimation {
+                    IconButton(onClick = {
+                        if (state.searchText.isNotBlank()) {
+                            state.action(SearchPageAction.AddTag(state.searchText))
+                            state.action(SearchPageAction.ChangeSearchText("")) // 清空输入
+                        }
+                    }, modifier = Modifier.align(Alignment.CenterVertically)) {
+                        Icon(TablerIcons.Send, null, tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun SearchItem(state: SearchPageState, item: DataItem) {
+        Card(Modifier.padding(6.dp).clickable {
+            state.action(SearchPageAction.JumpView(item))
+        }) {
+            val timestamp = item.timestamp
+            var imgState: ImageState by rememberSaveable(timestamp) {
+                mutableStateOf(
+                    ImageState.Loading
+                )
+            }
+            when (imgState) {
+                ImageState.Error -> {
+                    Text("ERROR!", color = MaterialTheme.colorScheme.error)
+                }
+
+                ImageState.Loading -> {
+                    CircularProgressIndicator()
+                }
+
+                is ImageState.Success -> {
+                    AsyncImage(
+                        (imgState as ImageState.Success).bytes,
+                        null,
+                        contentScale = ContentScale.FillWidth
+                    )
+                }
+            }
+            LaunchedEffect(timestamp) {
+                if (imgState is ImageState.Success) {
+                    return@LaunchedEffect
+                }
+                if (GlobalRecalling.imageCache.containsKey(timestamp)) {
+                    imgState = ImageState.Success(GlobalRecalling.imageCache[timestamp]!!)
+                    return@LaunchedEffect
+                }
+
+                imgState = try {
+                    withContext(GlobalRecalling.imageLoadingDispatcher) {
+                        val bytes = GlobalRecalling.imageCache.getOrPut(timestamp) {
+                            PluginManager.getStoragePlugin().getOrNull()
+                                ?.getScreenData(timestamp)
+                                ?.getOrNull()
+                        }
+                        if (bytes == null) {
+                            ImageState.Error
+                        } else {
+                            ImageState.Success(bytes)
+                        }
+                    }
+                } catch (e: Exception) {
+                    ImageState.Error
+                }
+            }
+
+            // ✅ 使用派生状态减少文本计算
+            val displayText by remember(item.data_) {
+                derivedStateOf { item.data_?.take(150) ?: "NULL" }
+            }
+            Text(text = displayText, maxLines = 3, color = MaterialTheme.colorScheme.secondary)
         }
     }
     sealed class SearchPageAction : AbsUIAction() {

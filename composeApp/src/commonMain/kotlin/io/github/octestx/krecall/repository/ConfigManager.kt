@@ -56,6 +56,7 @@ object ConfigManager {
             file.writeText(ojson.encodeToString(config2))
             config2
         }
+        ologger.info { "PluginConfig: $pluginConfig" }
     }
     @Synchronized
     fun savePluginConfig(newConfig: KRecallPluginConfig) {

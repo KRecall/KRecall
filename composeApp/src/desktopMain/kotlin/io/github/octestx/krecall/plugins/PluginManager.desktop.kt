@@ -1,26 +1,35 @@
 package io.github.octestx.krecall.plugins
 
+import io.github.kotlin.fibonacci.appDirs
+import io.github.kotlin.fibonacci.utils.asFilePath
+import io.github.kotlin.fibonacci.utils.linkDir
 import io.github.octestx.krecall.plugins.basic.PluginBasic
-import io.github.octestx.krecall.plugins.capturescreen.CaptureScreenByKDESpectaclePlugin
+import io.github.octestx.krecall.plugins.basic.PluginMetadata
 import io.github.octestx.krecall.plugins.capturescreen.CaptureScreenByWinPowerShellPlugin
 import io.github.octestx.krecall.plugins.impl.ocr.OCRByZhiPuPlugin
 import io.github.octestx.krecall.plugins.impl.storage.OTStoragePlugin
-import io.github.octestx.krecall.plugins.ocr.PPOCRPlugin
+import io.github.vinceglb.filekit.utils.toFile
 
-actual fun getPlatformExtPlugins(): Set<PluginBasic> {
-    //TODO
-    return setOf()
+actual suspend fun getPlatformExtPlugins(): Map<PluginMetadata, (metadata: PluginMetadata) -> PluginBasic> {
+    val jarsDir = appDirs.getUserDataDir().asFilePath().linkDir("JarPlugins").toFile()
+    JarPluginManager.loadPluginsFromDir(jarsDir)
+    return JarPluginManager.plugins.values.map {
+        it.metadata to { metadata: PluginMetadata ->
+            if (metadata != it.metadata) throw IllegalArgumentException("metadata is not right")
+            it.instanceCreator()
+        }
+    }.toMap()
 }
 
-actual fun getPlatformInnerPlugins(): Set<PluginBasic> {
+actual suspend fun getPlatformInnerPlugins(): Map<PluginMetadata, (metadata: PluginMetadata) -> PluginBasic> {
     //TODO
-    return setOf(
-        CaptureScreenByKDESpectaclePlugin(),
-        CaptureScreenByWinPowerShellPlugin(),
+    return mapOf(
+//        CaptureScreenByKDESpectaclePlugin.metadata to { CaptureScreenByKDESpectaclePlugin(it) },
+        CaptureScreenByWinPowerShellPlugin.metadata to { CaptureScreenByWinPowerShellPlugin(it) },
 
-        OCRByZhiPuPlugin(),
-        PPOCRPlugin(),
+        OCRByZhiPuPlugin.metadata to { OCRByZhiPuPlugin(it) },
+//        PPOCRPlugin(),
 
-        OTStoragePlugin(),
+        OTStoragePlugin.metadata to { OTStoragePlugin(it) }
     )
 }

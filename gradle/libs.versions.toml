@@ -11,13 +11,37 @@ androidx-espresso-core = "3.6.1"
 androidx-lifecycle = "2.8.4"
 androidx-material = "1.12.0"
 androidx-test-junit = "1.2.1"
+basicMultiplatformLib = "0.0.8"
+basicMultiplatformUiLib = "0.0.8"
+coilCompose = "3.1.0"
 compose-multiplatform = "1.7.0"
+compottieDot = "2.0.0-rc04"
+conveyorControl = "1.1"
+filekitCoil = "0.10.0-beta01"
 junit = "4.13.2"
 kotlin = "2.1.0"
 kotlinx-coroutines = "1.10.1"
+kotlinxDatetime = "0.6.1"
+kotlinxSerializationJson = "1.8.0"
+ktorVersion = "3.1.0"
+kRecallBasicPluginLibrary = "1.1.2F1"
+oapiJavaSdk = "release-V4-2.3.0"
+openaiClient = "4.0.0"
+opencv = "4.9.0-0"
+sqliteDriver = "2.0.2"
 uiTextAndroid = "1.7.8"
 
 [libraries]
+basic-multiplatform-lib = { module = "io.github.octestx:basic-multiplatform-lib", version.ref = "basicMultiplatformLib" }
+basic-multiplatform-ui-lib = { module = "io.github.octestx:basic-multiplatform-ui-lib", version.ref = "basicMultiplatformUiLib" }
+coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coilCompose" }
+compottie = { module = "io.github.alexzhirkevich:compottie", version.ref = "compottieDot" }
+compottie-dot = { module = "io.github.alexzhirkevich:compottie-dot", version.ref = "compottieDot" }
+conveyor-control = { module = "dev.hydraulic.conveyor:conveyor-control", version.ref = "conveyorControl" }
+filekit-coil = { module = "io.github.vinceglb:filekit-coil", version.ref = "filekitCoil" }
+filekit-core = { module = "io.github.vinceglb:filekit-core", version.ref = "filekitCoil" }
+filekit-dialogs = { module = "io.github.vinceglb:filekit-dialogs", version.ref = "filekitCoil" }
+filekit-dialogs-compose = { module = "io.github.vinceglb:filekit-dialogs-compose", version.ref = "filekitCoil" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -32,6 +56,17 @@ androidx-lifecycle-viewmodel = { group = "org.jetbrains.androidx.lifecycle", nam
 androidx-lifecycle-runtime-compose = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
 kotlinx-coroutines-swing = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-swing", version.ref = "kotlinx-coroutines" }
 androidx-ui-text-android = { group = "androidx.compose.ui", name = "ui-text-android", version.ref = "uiTextAndroid" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
+ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktorVersion" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktorVersion" }
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktorVersion" }
+ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktorVersion" }
+library = { module = "io.github.octestx.krecall.plugins.basiclib:library", version.ref = "kRecallBasicPluginLibrary" }
+oapi-java-sdk = { module = "cn.bigmodel.openapi:oapi-java-sdk", version.ref = "oapiJavaSdk" }
+openai-client = { module = "com.aallam.openai:openai-client", version.ref = "openaiClient" }
+opencv = { module = "org.openpnp:opencv", version.ref = "opencv" }
+sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqliteDriver" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

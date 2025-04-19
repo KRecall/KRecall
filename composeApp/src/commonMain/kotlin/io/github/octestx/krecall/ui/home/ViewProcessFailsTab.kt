@@ -1,12 +1,21 @@
 package io.github.octestx.krecall.ui.home
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.VerticalScrollbar
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.material3.*
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollbarAdapter
+import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -18,11 +27,11 @@ import coil3.compose.AsyncImage
 import io.github.octestx.krecall.GlobalRecalling
 import io.github.octestx.krecall.model.ImageState
 import io.github.octestx.krecall.plugins.PluginManager
-import io.github.octestx.krecall.plugins.basic.AIResult
-import io.github.octestx.krecall.plugins.basic.exceptionSerializableOjson
 import io.github.octestx.krecall.repository.DataDB
 import io.klogging.noCoLogger
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import models.sqld.DataItem
 import ui.core.AbsUIPage
 
@@ -91,8 +100,9 @@ class ViewProcessFailsTab(model: ViewProcessFailsPageModel): AbsUIPage<Any?, Vie
                                 derivedStateOf {
                                     if (item.error == null) "NULL"
                                     else {
-                                        val fail = exceptionSerializableOjson.decodeFromString<AIResult.Failed<String>>(item.error)
-                                        "${fail.type.name} [${fail.type.message}]"
+//                                        val fail = exceptionSerializableOjson.decodeFromString<AIResult.Failed<String>>(item.error)
+//                                        "${fail.type.name} [${fail.type.message}]"
+                                        item.error
                                     }
                                 }
                             }

@@ -12,9 +12,10 @@ import io.github.kotlin.fibonacci.ui.utils.ToastModel
 import io.github.kotlin.fibonacci.utils.OS
 import io.github.kotlin.fibonacci.utils.linkFile
 import io.github.kotlin.fibonacci.utils.ojson
+import io.github.kotlin.fibonacci.utils.toKPath
 import io.github.octestx.krecall.exceptions.ConfigurationNotSavedException
 import io.github.octestx.krecall.plugins.basic.AbsStoragePlugin
-import io.github.octestx.krecall.utils.toKPath
+import io.github.octestx.krecall.plugins.basic.PluginMetadata
 import io.klogging.noCoLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -29,9 +30,15 @@ import java.io.OutputStream
 import java.nio.file.Files
 import java.nio.file.Paths
 
-class OTStoragePlugin: AbsStoragePlugin(pluginId = "OTStoragePlugin") {
-    override val supportPlatform: Set<OS.OperatingSystem> = setOf(OS.OperatingSystem.WIN, OS.OperatingSystem.LINUX, OS.OperatingSystem.MACOS, OS.OperatingSystem.OTHER)
-    override val supportUI: Boolean = true
+class OTStoragePlugin(metadata: PluginMetadata): AbsStoragePlugin(metadata) {
+    companion object {
+        val metadata = PluginMetadata(
+            pluginId = "OTStoragePlugin",
+            supportPlatform = setOf(OS.OperatingSystem.WIN, OS.OperatingSystem.LINUX, OS.OperatingSystem.MACOS, OS.OperatingSystem.OTHER),
+            supportUI = true,
+            mainClass = "io.github.octestx.krecall.plugins.impl.storage.OTStoragePlugin"
+        )
+    }
     private val ologger = noCoLogger<OTStoragePlugin>()
     private val configFile = File(pluginDir, "config.json")
     @Volatile

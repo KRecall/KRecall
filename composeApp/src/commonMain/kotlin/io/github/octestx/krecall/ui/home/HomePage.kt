@@ -13,12 +13,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import io.github.kotlin.fibonacci.ui.theme.ThemeRepository
 import io.github.kotlin.fibonacci.ui.toast
 import io.github.octestx.krecall.GlobalRecalling
 import io.github.octestx.krecall.composeapp.generated.resources.Res
 import io.github.octestx.krecall.composeapp.generated.resources.developer_avatar
 import io.github.octestx.krecall.repository.ConfigManager
 import io.github.octestx.krecall.ui.TimestampViewPage
+import io.github.octestx.krecall.utils.EnhancedDropdownSelector
 import io.klogging.noCoLogger
 import org.jetbrains.compose.resources.InternalResourceApi
 import org.jetbrains.compose.resources.painterResource
@@ -37,19 +39,43 @@ class HomePage(model: HomePageModel): AbsUIPage<Any?, HomePage.HomePageState, Ho
             drawerState = drawerState,
             drawerContent = {
                 Column(Modifier.fillMaxHeight().background(MaterialTheme.colorScheme.background.copy(alpha = 0.95f)).padding(16.dp)) {
-                    Text("KRecall")
+                    Text("KRecall", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
                     Image(
                         painter = painterResource(Res.drawable.developer_avatar),
                         contentDescription = "App Logo",
                         modifier = Modifier.padding(16.dp).size(120.dp).clip(MaterialTheme.shapes.medium)
                     )
-                    Text("Code by OCTest")
+                    Text("Code by OCTest", color = MaterialTheme.colorScheme.primary)
                     Button(onClick = {
                         ConfigManager.save(ConfigManager.config.copy(initPlugin = false))
                         toast.applyShow("重启生效")
                     }) {
                         Text("重新配置插件")
                     }
+                    val currentThemeKey = ThemeRepository.currentTheme.first
+                    val availableThemeKey = remember { ThemeRepository.allTheme.keys.toList() }
+                    var whenHoverTmpSaveResThemeKey: String? by rememberSaveable { mutableStateOf(null) }
+                    EnhancedDropdownSelector(
+                        availableThemeKey,
+                        selectedItem = if (whenHoverTmpSaveResThemeKey != null) whenHoverTmpSaveResThemeKey else currentThemeKey,
+                        onItemSelected = {
+                            ThemeRepository.switchTheme(it)
+                        },
+                        onHover = {
+                            if (whenHoverTmpSaveResThemeKey == null) {
+                                whenHoverTmpSaveResThemeKey = it
+                            }
+                            if (currentThemeKey != it) {
+                                ThemeRepository.switchTheme(it)
+                            }
+                        },
+                        onExitHover = {
+                            whenHoverTmpSaveResThemeKey?.let {
+                                ThemeRepository.switchTheme(it)
+                                whenHoverTmpSaveResThemeKey = null
+                            }
+                        }
+                    )
                 }
             }
         ) {

@@ -1,6 +1,8 @@
 package io.github.octestx.krecall
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -53,6 +55,7 @@ class AppMainPage(model: AppMainPageModel): AbsUIPage<Any?, AppMainPage.AppMainP
                     navTransition = NavTransition(),
                     modifier = Modifier
                         .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background)
 //                    .onKeyEvent { event ->
 //                        when (event.key) {
 //                            Key.Escape -> {

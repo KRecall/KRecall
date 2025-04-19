@@ -14,10 +14,7 @@ import com.aallam.openai.client.OpenAIHost
 import io.github.kotlin.fibonacci.utils.OS
 import io.github.kotlin.fibonacci.utils.ojson
 import io.github.octestx.krecall.exceptions.ConfigurationNotSavedException
-import io.github.octestx.krecall.plugins.basic.AIErrorType
-import io.github.octestx.krecall.plugins.basic.AIResult
-import io.github.octestx.krecall.plugins.basic.AbsOCRPlugin
-import io.github.octestx.krecall.plugins.basic.OCRResult
+import io.github.octestx.krecall.plugins.basic.*
 import io.github.octestx.krecall.plugins.impl.storage.OTStoragePlugin
 import io.klogging.noCoLogger
 import io.ktor.util.*
@@ -29,9 +26,15 @@ import kotlinx.serialization.Serializable
 import java.io.File
 
 
-class OCRByZhiPuPlugin: AbsOCRPlugin("OCRByZhiPuPlugin") {
-    override val supportPlatform: Set<OS.OperatingSystem> = setOf(OS.OperatingSystem.WIN, OS.OperatingSystem.LINUX, OS.OperatingSystem.MACOS, OS.OperatingSystem.OTHER)
-    override val supportUI: Boolean = true
+class OCRByZhiPuPlugin(metadata: PluginMetadata): AbsOCRPlugin(metadata) {
+    companion object {
+        val metadata = PluginMetadata(
+            pluginId = "OCRByZhiPuPlugin",
+            supportPlatform = setOf(OS.OperatingSystem.WIN, OS.OperatingSystem.LINUX, OS.OperatingSystem.MACOS, OS.OperatingSystem.OTHER),
+            supportUI = true,
+            mainClass = "io.github.octestx.krecall.plugins.impl.ocr.OCRByZhiPuPlugin"
+        )
+    }
     private val ologger = noCoLogger<OTStoragePlugin>()
     private val configFile = File(pluginDir, "config.json")
     @Volatile
@@ -47,16 +50,20 @@ class OCRByZhiPuPlugin: AbsOCRPlugin("OCRByZhiPuPlugin") {
         val frequencyPenalty: Double,
         val backupOCRAPI: String,
     )
+//    private val defaultSystemMsg = """
+//        你是Win11的Recall功能的新后端，我会给你提供一系列电脑截图,请将截图中的内容分析出来，不要使用自然语言，请分成许多个短小的词语,并且进行合理断词,回答要全面，不能使用‘等’，例如分析文件管理器窗口时把里面包含的所有文件的文件名列出来,使用换行分割不同的词语,开头末尾不要引号,类似这样:Clash Verge
+//        OTStoragePlugin
+//        微信
+//        文件夹
+//        文件资源管理器
+//        所有图片
+//        gsd.png
+//        slk the first.png
+//        code.kt
+//你是OCR后端，请将你看到的内容输出成文本,禁止重复说一个词
+//    """.trimIndent()
     private val defaultSystemMsg = """
-        你是Win11的Recall功能的新后端，我会给你提供一系列电脑截图,请将截图中的内容分析出来，不要使用自然语言，请分成许多个短小的词语,并且进行合理断词,回答要全面，不能使用‘等’，例如分析文件管理器窗口时把里面包含的所有文件的文件名列出来,使用换行分割不同的词语,开头末尾不要引号,类似这样:Clash Verge
-        OTStoragePlugin
-        微信
-        文件夹
-        文件资源管理器
-        所有图片
-        gsd.png
-        slk the first.png
-        code.kt
+        你是OCR后端，请将你看到的内容输出成文本,禁止重复说一个词
     """.trimIndent()
 
     override suspend fun recognize(screen: ByteArray): OCRResult {
@@ -147,6 +154,7 @@ class OCRByZhiPuPlugin: AbsOCRPlugin("OCRByZhiPuPlugin") {
     override fun selected() {}
     override fun unselected() {}
     private var savedConfig = MutableStateFlow(true)
+
     @Composable
     override fun UI() {
         val scope = rememberCoroutineScope()

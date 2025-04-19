@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
 import io.github.kotlin.fibonacci.utils.OS
 import io.github.octestx.krecall.plugins.basic.AbsCaptureScreenPlugin
+import io.github.octestx.krecall.plugins.basic.PluginMetadata
 import io.github.octestx.krecall.plugins.basic.WindowInfo
 import io.klogging.noCoLogger
 import kotlinx.coroutines.Dispatchers
@@ -19,66 +20,44 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.decodeToImageBitmap
+import java.awt.Robot
+import java.awt.Toolkit
+import java.awt.image.BufferedImage
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.OutputStream
+import javax.imageio.ImageIO
 
-class CaptureScreenByWinPowerShellPlugin: AbsCaptureScreenPlugin(pluginId = "CaptureScreenByWinPowerShellPlugin") {
-    override val supportPlatform: Set<OS.OperatingSystem> = setOf(OS.OperatingSystem.WIN)
-    override val supportUI: Boolean = true
+class CaptureScreenByWinPowerShellPlugin(metadata: PluginMetadata): AbsCaptureScreenPlugin(metadata) {
+    companion object {
+        val metadata = PluginMetadata(
+            pluginId = "CaptureScreenByWinPowerShellPlugin",
+            supportPlatform = setOf(OS.OperatingSystem.WIN, OS.OperatingSystem.MACOS),
+            supportUI = true,
+            mainClass = "io.github.octestx.krecall.plugins.capturescreen.CaptureScreenByWinPowerShellPlugin"
+        )
+    }
     private val ologger = noCoLogger<CaptureScreenByWinPowerShellPlugin>()
-    override suspend fun supportOutputToStream(): Boolean = false
+    override suspend fun supportOutputToStream(): Boolean = true
 
-    override suspend fun getScreen(outputStream: OutputStream): WindowInfo {
-        throw UnsupportedOperationException()
+    override suspend fun getScreen(outputStream: OutputStream): WindowInfo = withContext(Dispatchers.IO) {
+        val capture = captureScreen()
+        ImageIO.write(capture, "png", outputStream)
+        getCurrentWindowInfo()
     }
 
-    override suspend fun getScreen(outputFileBitItNotExits: File): WindowInfo {
-        return withContext(Dispatchers.IO) {
-            ologger.info { "getScreen: $outputFileBitItNotExits" }
+    private lateinit var robot: Robot
 
+    override suspend fun getScreen(outputFileBitItNotExits: File): WindowInfo = withContext(Dispatchers.IO) {
+        val capture = captureScreen()
+        ImageIO.write(capture, "png", outputFileBitItNotExits)
+        getCurrentWindowInfo()
+    }
 
-            // 更安全的路径处理方案
-            val safePath = outputFileBitItNotExits.absolutePath
-                .replace("'", "''")  // 处理单引号
-                .replace(" ", "` ")  // 处理空格
-
-            val screenSTR = "\$" + "screen"
-            val bitmapSTR = "\$" + "bitmap"
-            val graphicsSTR = "\$" + "graphics"
-            val psCommand = """
-                Add-Type -AssemblyName System.Windows.Forms
-                Add-Type -AssemblyName System.Drawing
-                $screenSTR = [Windows.Forms.Screen]::PrimaryScreen.Bounds
-                $bitmapSTR = New-Object Drawing.Bitmap $screenSTR.width, $screenSTR.height
-                $graphicsSTR = [Drawing.Graphics]::FromImage($bitmapSTR)
-                $graphicsSTR.CopyFromScreen([Drawing.Point]::Empty, [Drawing.Point]::Empty, $screenSTR.size)
-                $bitmapSTR.Save('$safePath')  # 使用单引号包裹路径
-            """.trimIndent()
-
-            val processBuilder = ProcessBuilder(
-                "powershell.exe",
-                "-Command",
-                psCommand
-            )
-
-            processBuilder.redirectErrorStream(true)
-            val process = processBuilder.start()
-
-            // 处理执行结果
-            val exitCode = process.waitFor()
-            if (exitCode != 0 || !outputFileBitItNotExits.exists()) {
-                val errorOutput = process.errorStream.bufferedReader().readText()
-                val err = RuntimeException("""
-                    Screenshot failed! 
-                    Exit code: $exitCode
-                    Error: $errorOutput
-                """.trimIndent())
-                ologger.error(err) { "Screenshot failed" }
-                throw err
-            }
-            getCurrentWindowInfo()
-        }
+    private suspend fun captureScreen(): BufferedImage = withContext(Dispatchers.IO) {
+        val screenSize = Toolkit.getDefaultToolkit().screenSize
+        val rect = java.awt.Rectangle(screenSize)
+        robot.createScreenCapture(rect)
     }
 
     private fun getCurrentWindowInfo(): WindowInfo {
@@ -132,7 +111,9 @@ ${STR}title = if (${STR}length -gt 0) { ${STR}sb.ToString() } else { "Unknown" }
         ologger.info { "Loaded" }
     }
 
-    override fun selected() {}
+    override fun selected() {
+        robot = Robot()
+    }
     override fun unselected() {}
 
     @OptIn(ExperimentalResourceApi::class)

@@ -1,23 +1,25 @@
 package io.github.octestx.krecall.ui.home
 
 import TimestampRateController
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.unit.dp
 import io.github.octestx.krecall.GlobalRecalling
 import io.github.octestx.krecall.plugins.PluginManager
 import io.github.octestx.krecall.repository.ConfigManager
 import io.github.octestx.krecall.repository.DataDB
+import io.github.octestx.krecall.utils.DelayShowAnimation
+import io.github.octestx.krecall.utils.StepLoadAnimation
 import io.klogging.noCoLogger
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.ExperimentalResourceApi
@@ -29,31 +31,71 @@ class HomeTab(model: HomePageModel): AbsUIPage<Any?, HomeTab.HomePageState, Home
     @OptIn(ExperimentalResourceApi::class)
     @Composable
     override fun UI(state: HomePageState) {
-        Column {
-            CaptureScreenController(state)
-            ProcessImageController(state)
-            Row {
-                Text("theNowMode")
-                Switch(state.theNowMode, { state.action(HomePageAction.ChangeTheNowMode(!state.theNowMode)) })
-            }
-            Column(modifier = Modifier.verticalScroll(state.scrollState)) {
-                if (state.selectedTimestampIndex >= 0) {
-                    // 添加时间戳控制器
-                    TimestampRateController(
-                        timestamps = GlobalRecalling.allTimestamp,
-                        currentIndex = state.selectedTimestampIndex,
-                        theNowMode = state.theNowMode
-                    ) {
-                        state.action(HomePageAction.ChangeSelectedTimestampIndex(it))
+        MaterialTheme {
+            StepLoadAnimation(5) { step ->
+                Row(Modifier.background(MaterialTheme.colorScheme.background)) {
+                    Column(Modifier.weight(1f)) {
+                        Row {
+                            if (step >= 1) {
+                                DelayShowAnimation {
+                                    CaptureScreenController(state)
+                                    Spacer(Modifier.padding(12.dp).height(6.dp).background(MaterialTheme.colorScheme.onBackground).align(Alignment.CenterVertically))
+                                }
+                            }
+                            if (step >= 2) {
+                                DelayShowAnimation {
+                                    ProcessImageController(state)
+                                }
+                            }
+                        }
+                        Column(modifier = Modifier.verticalScroll(state.scrollState).padding(5.dp)) {
+                            if (state.selectedTimestampIndex >= 0 && step >= 3) {
+                                // 添加时间戳控制器
+                                DelayShowAnimation {
+                                    TimestampRateController(
+                                        timestamps = GlobalRecalling.allTimestamp,
+                                        currentIndex = state.selectedTimestampIndex,
+                                        theNowMode = state.theNowMode,
+                                        changeTheNowMode = { state.action(HomePageAction.ChangeTheNowMode(it))},
+                                        modifier = Modifier.border(border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary), shape = MaterialTheme.shapes.medium).padding(5.dp)
+                                    ) {
+                                        state.action(HomePageAction.ChangeSelectedTimestampIndex(it))
+                                    }
+                                }
+                            }
+                            state.currentImagePainter?.apply {
+                                Spacer(Modifier.height(5.dp))
+                                if (step >= 4) {
+                                    DelayShowAnimation {
+                                        Image(
+                                            painter = this,
+                                            contentDescription = "Screen",
+                                            modifier = Modifier.border(border = BorderStroke(2.dp, MaterialTheme.colorScheme.secondary)).padding(5.dp)
+                                        )
+                                    }
+                                }
+                            }
+                            Spacer(Modifier.height(5.dp))
+                            if (step >= 5) {
+                                Column(modifier = Modifier.fillMaxSize().border(border = BorderStroke(2.dp, MaterialTheme.colorScheme.tertiary), shape = MaterialTheme.shapes.medium).padding(5.dp)) {
+                                    Text("Data:", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                                    Text(state.currentData, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+                                }
+                            }
+                        }
                     }
-                }
-                state.currentImagePainter?.apply {
-                    Image(
-                        painter = this,
-                        contentDescription = "Screen"
+                    VerticalScrollbar(
+                        modifier = Modifier
+                            .fillMaxHeight(),
+                        adapter = rememberScrollbarAdapter(state.scrollState),
+//                style = ScrollbarStyle(
+//                    thickness = 8.dp,
+//                    hoverDurationMillis = 300,
+//                    unhoverColor = Color.LightGray,
+//                    hoverColor = Color.Gray
+//                )
                     )
                 }
-                Text("Data: ${state.currentData}")
             }
         }
     }
@@ -61,10 +103,15 @@ class HomeTab(model: HomePageModel): AbsUIPage<Any?, HomeTab.HomePageState, Home
     @Composable
     private fun CaptureScreenController(state: HomePageState) {
         val collectingScreenDelay by GlobalRecalling.collectingDelay.collectAsState()
-        LinearProgressIndicator( progress = { (collectingScreenDelay.toDouble() / ConfigManager.config.collectScreenDelay).toFloat() })
         Row() {
+            AnimatedVisibility(GlobalRecalling.collectingScreen.collectAsState().value) {
+                Box() {
+                    CircularProgressIndicator(progress = { (collectingScreenDelay.toDouble() / ConfigManager.config.collectScreenDelay).toFloat() }, modifier = Modifier.padding(5.dp))
+                    Text("${"%.1f".format(collectingScreenDelay.toDouble() / 1000)}s", modifier = Modifier.align(Alignment.Center), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+                }
+            }
             val collectingScreen by GlobalRecalling.collectingScreen.collectAsState()
-            Text("CollectingScreen[${"%.1f".format(collectingScreenDelay.toDouble() / 1000)}s]")
+            Text("获取信息", modifier = Modifier.align(Alignment.CenterVertically), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
             Switch(collectingScreen, { state.action(HomePageAction.ChangeCollectingScreen(!collectingScreen)) })
         }
     }
@@ -74,16 +121,14 @@ class HomeTab(model: HomePageModel): AbsUIPage<Any?, HomeTab.HomePageState, Home
         Row {
             val processingData by GlobalRecalling.processingData.collectAsState()
             val processingDataCount = GlobalRecalling.processingDataList.count.collectAsState().value
-            val text = if (processingDataCount > 0 ) {
-                "ProcessingData[$processingDataCount]"
-            } else {
-                "ProcessingData"
+            Box {
+                if (processingData) {
+                    CircularProgressIndicator(modifier = Modifier.padding(5.dp))
+                }
+                Text(processingDataCount.toString(), modifier = Modifier.align(Alignment.Center), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
             }
-            Text(text)
+            Text("处理数据", modifier = Modifier.align(Alignment.CenterVertically), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
             Switch(processingData, { state.action(HomePageAction.ChangeProcessingData(!processingData)) })
-            if (processingData) {
-                CircularProgressIndicator()
-            }
         }
     }
 

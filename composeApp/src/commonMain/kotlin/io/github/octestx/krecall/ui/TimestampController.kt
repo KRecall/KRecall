@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -12,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import compose.icons.TablerIcons
 import compose.icons.tablericons.ArrowLeft
 import compose.icons.tablericons.ArrowRight
+import compose.icons.tablericons.Run
 import io.github.kotlin.fibonacci.utils.TimeStamp
 import kotlinx.coroutines.delay
 import kotlin.math.abs
@@ -22,6 +24,7 @@ fun TimestampRateController(
     timestamps: List<Long>,
     currentIndex: Int,
     theNowMode: Boolean,
+    changeTheNowMode: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     changeIndex: (Int) -> Unit
 ) {
@@ -66,11 +69,20 @@ fun TimestampRateController(
 
     Column(modifier.padding(16.dp)) {
         Row {
+            IconToggleButton(
+                theNowMode,
+                onCheckedChange = {
+                    changeTheNowMode(!theNowMode)
+                }
+            ) {
+                Icon(TablerIcons.Run, contentDescription = null, tint = if (theNowMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary)
+            }
             // 倍率指示器
             Text(
                 text = "×${abs(speedMultiplier).format(1)} ${if(speedMultiplier>0)"▶" else "◀"}",
                 style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                modifier = Modifier.align(Alignment.CenterVertically)
             )
             IconButton(onClick = {
                 val newIndex = currentIndex - 50

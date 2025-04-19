@@ -26,10 +26,8 @@ import io.github.kotlin.fibonacci.ui.utils.ToastModel
 import io.github.octestx.krecall.composeapp.generated.resources.Res
 import io.github.octestx.krecall.exceptions.ConfigurationNotSavedException
 import io.github.octestx.krecall.plugins.PluginManager
-import io.github.octestx.krecall.plugins.basic.AbsCaptureScreenPlugin
-import io.github.octestx.krecall.plugins.basic.AbsOCRPlugin
-import io.github.octestx.krecall.plugins.basic.AbsStoragePlugin
-import io.github.octestx.krecall.plugins.basic.PluginBasic
+import io.github.octestx.krecall.plugins.basic.*
+import io.github.octestx.krecall.plugins.tryInit
 import io.klogging.noCoLogger
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
@@ -39,70 +37,72 @@ class PluginConfigPage(model: PluginConfigModel): AbsUIPage<Any?, PluginConfigPa
     private val ologger = noCoLogger<PluginConfigPage>()
     @Composable
     override fun UI(state: PluginConfigState) {
-        Column {
-            Row {
-                val allInitialized = PluginManager.AllPluginInitialized()
-                if (allInitialized) {
-                    Text("AllPluginsInitialized")
-                    Button(onClick = {
-                        state.action(PluginConfigAction.ConfigDone)
-                    }) {
-                        Text("ConfigDone")
-                    }
-                } else {
-                    Button(onClick = {
-                        scope.launch {
-                            PluginManager.initAllPlugins()
+        MaterialTheme {
+            Column(Modifier.background(MaterialTheme.colorScheme.background)) {
+                Row {
+                    val allInitialized = PluginManager.AllPluginInitialized()
+                    if (allInitialized) {
+                        Text("AllPluginsInitialized", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleMedium)
+                        Button(onClick = {
+                            state.action(PluginConfigAction.ConfigDone)
+                        }) {
+                            Text("ConfigDone")
                         }
-                    }) {
-                        Text("InitAllPlugins")
+                    } else {
+                        Button(onClick = {
+                            scope.launch {
+                                PluginManager.initAllPlugins()
+                            }
+                        }) {
+                            Text("InitAllPlugins")
+                        }
                     }
-                }
 
-            }
-            Box(Modifier.fillMaxSize()) {
-                val scrollState = rememberLazyListState()
-                LazyColumn(state = scrollState) {
-                    item {
-                        PluginCard(state.captureScreenPlugin, state.availableCaptureScreenPlugins, "截屏插件") {
-                            state.action(PluginConfigAction.SelectGetScreenPlugin(it))
-                        }
-                    }
-                    item {
-                        PluginCard(state.storagePlugin, state.availableStoragePlugins, "存储插件") {
-                            state.action(PluginConfigAction.SelectStoragePlugin(it))
-                        }
-                    }
-                    item {
-                        PluginCard(state.ocrPlugin, state.availableOCRPlugins, "OCR插件") {
-                            state.action(PluginConfigAction.SelectScreenLanguageConverterPlugin(it))
-                        }
-                    }
                 }
-                VerticalScrollbar(
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd) // 右侧对齐
-                        .fillMaxHeight()
-                        .background(Color.LightGray.copy(alpha = 0.5f)), // 半透明背景
-                    adapter = rememberScrollbarAdapter(
-                        scrollState = scrollState,
+                Box(Modifier.fillMaxSize()) {
+                    val scrollState = rememberLazyListState()
+                    LazyColumn(state = scrollState) {
+                        item {
+                            PluginCard(state.captureScreenPlugin, state.availableCaptureScreenPlugins, "截屏插件") {
+                                state.action(PluginConfigAction.SelectGetScreenPlugin(it))
+                            }
+                        }
+                        item {
+                            PluginCard(state.storagePlugin, state.availableStoragePlugins, "存储插件") {
+                                state.action(PluginConfigAction.SelectStoragePlugin(it))
+                            }
+                        }
+                        item {
+                            PluginCard(state.ocrPlugin, state.availableOCRPlugins, "OCR插件") {
+                                state.action(PluginConfigAction.SelectScreenLanguageConverterPlugin(it))
+                            }
+                        }
+                    }
+                    VerticalScrollbar(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd) // 右侧对齐
+                            .fillMaxHeight()
+                            .background(Color.LightGray.copy(alpha = 0.5f)), // 半透明背景
+                        adapter = rememberScrollbarAdapter(
+                            scrollState = scrollState,
+                        )
                     )
-                )
+                }
             }
         }
     }
     @OptIn(ExperimentalResourceApi::class)
     @Composable
-    private fun <P: PluginBasic> PluginCard(pluginData: Result<P>, availablePlugins: List<P>, type: String, selectedPlugin: (pluginId: String) -> Unit) {
+    private fun <P: PluginBasic> PluginCard(pluginData: Result<P>, availablePlugins: List<P>, type: String, selectedPlugin: (pluginMetadata: PluginMetadata) -> Unit) {
         Column {
             Row {
-                Text("Available: ")
+                Text("Available: ", color = MaterialTheme.colorScheme.secondary)
                 LazyRow {
                     items(availablePlugins) { plugin ->
                         Button(onClick = {
-                            selectedPlugin(plugin.pluginId)
-                        }, enabled = (pluginData.getOrNull()?.pluginId ?: System.nanoTime()) != plugin.pluginId) {
-                            Text(plugin.pluginId)
+                            selectedPlugin(plugin.metadata)
+                        }, enabled = (pluginData.getOrNull()?.metadata?.pluginId ?: System.nanoTime()) != plugin.metadata.pluginId) {
+                            Text(plugin.metadata.pluginId)
                         }
                     }
                 }
@@ -116,11 +116,11 @@ class PluginConfigPage(model: PluginConfigModel): AbsUIPage<Any?, PluginConfigPa
                 Column {
                     Row {
                         if (initialized) {
-                            Text("$type[${it.pluginId}]: 已初始化", color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+                            Text("$type[${it.metadata.pluginId}]: 已初始化", color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
                         } else if (err == null) {
-                            Text("$type[${it.pluginId}]: 未初始化", color = MaterialTheme.colorScheme.secondary, modifier = Modifier.weight(1f))
+                            Text("$type[${it.metadata.pluginId}]: 未初始化", color = MaterialTheme.colorScheme.secondary, modifier = Modifier.weight(1f))
                         } else {
-                            Text("$type[${it.pluginId}]: 未初始化[${err?.message}]", color = MaterialTheme.colorScheme.secondary, modifier = Modifier.weight(1f))
+                            Text("$type[${it.metadata.pluginId}]: 未初始化[${err?.message}]", color = MaterialTheme.colorScheme.secondary, modifier = Modifier.weight(1f))
                         }
                         AnimatedVisibility(pluginData.getOrNull()?.initialized?.value != true) {
                             Button(onClick = {
@@ -166,7 +166,7 @@ class PluginConfigPage(model: PluginConfigModel): AbsUIPage<Any?, PluginConfigPa
                             }
                         }
                     }
-                    if (it.supportUI) {
+                    if (it.metadata.supportUI) {
                         Surface(Modifier.padding(12.dp)) {
                             it.UI()
                         }
@@ -191,9 +191,9 @@ class PluginConfigPage(model: PluginConfigModel): AbsUIPage<Any?, PluginConfigPa
     sealed class PluginConfigAction : AbsUIAction() {
         //只有当插件全部初始化完毕后用户才能主动调用这个事件
         data object ConfigDone: PluginConfigAction()
-        data class SelectGetScreenPlugin(val pluginId: String): PluginConfigAction()
-        data class SelectStoragePlugin(val pluginId: String): PluginConfigAction()
-        data class SelectScreenLanguageConverterPlugin(val pluginId: String): PluginConfigAction()
+        data class SelectGetScreenPlugin(val pluginMetadata: PluginMetadata): PluginConfigAction()
+        data class SelectStoragePlugin(val pluginMetadata: PluginMetadata): PluginConfigAction()
+        data class SelectScreenLanguageConverterPlugin(val pluginMetadata: PluginMetadata): PluginConfigAction()
     }
     data class PluginConfigState(
         val captureScreenPlugin: Result<AbsCaptureScreenPlugin>,
@@ -237,13 +237,13 @@ class PluginConfigPage(model: PluginConfigModel): AbsUIPage<Any?, PluginConfigPa
                 }
 
                 is PluginConfigAction.SelectGetScreenPlugin -> {
-                    PluginManager.setCaptureScreenPlugin(action.pluginId)
+                    PluginManager.setCaptureScreenPlugin(action.pluginMetadata)
                 }
                 is PluginConfigAction.SelectScreenLanguageConverterPlugin -> {
-                    PluginManager.setOCRPlugin(action.pluginId)
+                    PluginManager.setOCRPlugin(action.pluginMetadata)
                 }
                 is PluginConfigAction.SelectStoragePlugin -> {
-                    PluginManager.setStoragePlugin(action.pluginId)
+                    PluginManager.setStoragePlugin(action.pluginMetadata)
                 }
             }
         }

@@ -3,22 +3,20 @@ package io.github.octestx.krecall.plugins
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import io.github.kotlin.fibonacci.utils.OS
-import io.github.octestx.krecall.plugins.basic.AbsCaptureScreenPlugin
-import io.github.octestx.krecall.plugins.basic.AbsOCRPlugin
-import io.github.octestx.krecall.plugins.basic.AbsStoragePlugin
-import io.github.octestx.krecall.plugins.basic.PluginBasic
+import io.github.octestx.krecall.plugins.basic.*
+import io.github.octestx.krecall.plugins.impl.PluginContextImpl
 import io.github.octestx.krecall.repository.ConfigManager
 import io.klogging.noCoLogger
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-expect fun getPlatformExtPlugins(): Set<PluginBasic>
-expect fun getPlatformInnerPlugins(): Set<PluginBasic>
+expect suspend fun getPlatformExtPlugins(): Map<PluginMetadata, (metadata: PluginMetadata) -> PluginBasic>
+expect suspend fun getPlatformInnerPlugins(): Map<PluginMetadata, (metadata: PluginMetadata) -> PluginBasic>
 
 object PluginManager {
     private val ologger = noCoLogger<PluginManager>()
 
-    private lateinit var allPlugin: Map<String, PluginBasic>
+    private val allPlugin: MutableMap<PluginMetadata, PluginBasic> = mutableMapOf()
 
     //TODO: 以后可以添加新插件支持
     private val _captureScreenPlugin: MutableStateFlow<Result<AbsCaptureScreenPlugin>> = MutableStateFlow(Result.failure(Exception("Plugin not loaded")))
@@ -39,39 +37,55 @@ object PluginManager {
         saveConfig()
     }
 
-    private fun loadPlugins() {
-        val preparePlugins = mutableSetOf<PluginBasic>()
-        preparePlugins.addAll(getPlatformExtPlugins())
-        preparePlugins.addAll(getPlatformInnerPlugins())
-        val plugins = mutableMapOf<String, PluginBasic>()
-        for (plugin in preparePlugins) {
-            if (plugin.supportPlatform.contains(OS.getCurrentOS()).not()) continue
-            plugins[plugin.pluginId] = plugin
+    private suspend fun loadPlugins() {
+        val preparePlugins = mutableMapOf<PluginMetadata, (metadata: PluginMetadata) -> PluginBasic>()
+        preparePlugins.putAll(getPlatformExtPlugins())
+        preparePlugins.putAll(getPlatformInnerPlugins())
+        val plugins = mutableMapOf<PluginMetadata, PluginBasic>()
+        for ((metadata, pluginCreator) in preparePlugins) {
+            if (metadata.supportPlatform.contains(OS.currentOS).not()) continue
+            val plugin = pluginCreator(metadata)
+            plugins[metadata] = plugin
             plugin.load()
             when(plugin) {
-                is AbsCaptureScreenPlugin -> _availableCaptureScreenPlugins[plugin.pluginId] = plugin
-                is AbsStoragePlugin -> _availableStoragePlugins[plugin.pluginId] = plugin
-                is AbsOCRPlugin -> _availableOCRPlugins[plugin.pluginId] = plugin
-                else -> _allOtherPlugin[plugin.pluginId] = plugin
+                is AbsCaptureScreenPlugin -> _availableCaptureScreenPlugins[metadata] = plugin
+                is AbsStoragePlugin -> _availableStoragePlugins[metadata] = plugin
+                is AbsOCRPlugin -> _availableOCRPlugins[metadata] = plugin
+                else -> _allOtherPlugin[metadata] = plugin
             }
         }
-        allPlugin = plugins
+        allPlugin.putAll(plugins)
         ologger.info { "LoadPlugins" }
+        checkKeyPlugin()
+    }
+    private fun checkKeyPlugin() {
+        if (availableCaptureScreenPlugins.isEmpty() || availableStoragePlugins.isEmpty() || availableOCRPlugins.isEmpty()) {
+            val errorMessage = """
+                Have some plugins not available load
+                availableCaptureScreenPlugins: ${availableCaptureScreenPlugins.keys}
+                availableStoragePlugins: ${availableStoragePlugins.keys}
+                availableOCRPlugins: ${availableOCRPlugins.keys}
+            """.trimIndent()
+            ologger.error {
+                errorMessage
+            }
+            throw ClassNotFoundException(errorMessage)
+        }
     }
 
     private fun selectConfigFromConfigFile() {
         val config = ConfigManager.pluginConfig
         val captureScreenPlugin = kotlin.runCatching {
-            val id = config.captureScreenPluginId ?: availableCaptureScreenPlugins.keys.firstOrNull()
-            (availableCaptureScreenPlugins[id]!!).apply { selected() }
+            val metadata = if (config.captureScreenPluginId == null) availableCaptureScreenPlugins.keys.firstOrNull() else availableCaptureScreenPlugins.keys.firstOrNull { it.pluginId == config.captureScreenPluginId }
+            (availableCaptureScreenPlugins[metadata]!!).apply { selected() }
         }
         val storagePlugin = kotlin.runCatching {
-            val id = config.storagePluginId ?: availableStoragePlugins.keys.firstOrNull()
-            (allPlugin[id]!! as AbsStoragePlugin).apply { selected() }
+            val metadata = if (config.storagePluginId == null) availableStoragePlugins.keys.firstOrNull() else availableStoragePlugins.keys.firstOrNull { it.pluginId == config.storagePluginId }
+            (allPlugin[metadata]!! as AbsStoragePlugin).apply { selected() }
         }
         val ocrPlugin = kotlin.runCatching {
-            val id = config.ocrPluginId ?: availableOCRPlugins.keys.firstOrNull()
-            (allPlugin[id]!! as AbsOCRPlugin).apply { selected() }
+            val metadata = if (config.ocrPluginId == null) availableOCRPlugins.keys.firstOrNull() else availableOCRPlugins.keys.firstOrNull { it.pluginId == config.ocrPluginId }
+            (allPlugin[metadata]!! as AbsOCRPlugin).apply { selected() }
         }
         if (captureScreenPlugin.isFailure || storagePlugin.isFailure || ocrPlugin.isFailure) {
             val errorMessage = """
@@ -93,42 +107,42 @@ object PluginManager {
         ologger.info { "SelectConfigFromConfigFile" }
     }
 
-    private val _allOtherPlugin = mutableMapOf<String, PluginBasic>()
-    val allOtherPlugin: Map<String, PluginBasic> = _allOtherPlugin
+    private val _allOtherPlugin = mutableMapOf<PluginMetadata, PluginBasic>()
+    val allOtherPlugin: Map<PluginMetadata, PluginBasic> = _allOtherPlugin
 
-    private val _availableCaptureScreenPlugins = mutableMapOf<String, AbsCaptureScreenPlugin>()
-    val availableCaptureScreenPlugins: Map<String, AbsCaptureScreenPlugin> = _availableCaptureScreenPlugins
-    fun setCaptureScreenPlugin(pluginId: String) {
-        if (pluginId == getCaptureScreenPlugin().getOrNull()?.pluginId) {
+    private val _availableCaptureScreenPlugins = mutableMapOf<PluginMetadata, AbsCaptureScreenPlugin>()
+    val availableCaptureScreenPlugins: Map<PluginMetadata, AbsCaptureScreenPlugin> = _availableCaptureScreenPlugins
+    fun setCaptureScreenPlugin(pluginMetadata: PluginMetadata) {
+        if (pluginMetadata == getCaptureScreenPlugin().getOrNull()?.metadata) {
             return
         }
         // 如果插件已经初始化，则不切换
         if (getCaptureScreenPlugin().getOrNull()?.initialized?.value == true) return
-        if (availableCaptureScreenPlugins.containsKey(pluginId)) {
-            ConfigManager.savePluginConfig(ConfigManager.pluginConfig.copy(captureScreenPluginId = pluginId))
+        if (availableCaptureScreenPlugins.containsKey(pluginMetadata)) {
+            ConfigManager.savePluginConfig(ConfigManager.pluginConfig.copy(captureScreenPluginId = pluginMetadata.pluginId))
             getCaptureScreenPlugin().getOrNull()?.unselected()
-            _captureScreenPlugin.value = kotlin.runCatching { (availableCaptureScreenPlugins[pluginId]!!).apply { selected() } }
+            _captureScreenPlugin.value = kotlin.runCatching { (availableCaptureScreenPlugins[pluginMetadata]!!).apply { selected() } }
             saveConfig()
         } else {
-            ologger.error { "Plugin $pluginId not found" }
+            ologger.error { "Plugin $pluginMetadata not found" }
         }
     }
     fun getCaptureScreenPlugin(): Result<AbsCaptureScreenPlugin> {
         return _captureScreenPlugin.value
     }
 
-    private val _availableStoragePlugins = mutableMapOf<String, AbsStoragePlugin>()
-    val availableStoragePlugins: Map<String, AbsStoragePlugin> = _availableStoragePlugins
-    fun setStoragePlugin(pluginId: String) {
-        if (pluginId == getStoragePlugin().getOrNull()?.pluginId) {
+    private val _availableStoragePlugins = mutableMapOf<PluginMetadata, AbsStoragePlugin>()
+    val availableStoragePlugins: Map<PluginMetadata, AbsStoragePlugin> = _availableStoragePlugins
+    fun setStoragePlugin(pluginMetadata: PluginMetadata) {
+        if (pluginMetadata == getStoragePlugin().getOrNull()?.metadata) {
             return
         }
         // 如果插件已经初始化，则不切换
         if (getStoragePlugin().getOrNull()?.initialized?.value == true) return
-        if (availableStoragePlugins.containsKey(pluginId)) {
-            ConfigManager.savePluginConfig(ConfigManager.pluginConfig.copy(storagePluginId = pluginId))
+        if (availableStoragePlugins.containsKey(pluginMetadata)) {
+            ConfigManager.savePluginConfig(ConfigManager.pluginConfig.copy(storagePluginId = pluginMetadata.pluginId))
             getStoragePlugin().getOrNull()?.unselected()
-            _storagePlugin.value = kotlin.runCatching { (availableStoragePlugins[pluginId]!!).apply { selected() } }
+            _storagePlugin.value = kotlin.runCatching { (availableStoragePlugins[pluginMetadata]!!).apply { selected() } }
             saveConfig()
         }
     }
@@ -136,18 +150,18 @@ object PluginManager {
         return _storagePlugin.value
     }
 
-    private val _availableOCRPlugins = mutableMapOf<String, AbsOCRPlugin>()
-    val availableOCRPlugins: Map<String, AbsOCRPlugin> = _availableOCRPlugins
-    fun setOCRPlugin(pluginId: String) {
-        if (pluginId == getOCRPlugin().getOrNull()?.pluginId) {
+    private val _availableOCRPlugins = mutableMapOf<PluginMetadata, AbsOCRPlugin>()
+    val availableOCRPlugins: Map<PluginMetadata, AbsOCRPlugin> = _availableOCRPlugins
+    fun setOCRPlugin(pluginMetadata: PluginMetadata) {
+        if (pluginMetadata == getOCRPlugin().getOrNull()?.metadata) {
             return
         }
         // 如果插件已经初始化，则不切换
         if (getOCRPlugin().getOrNull()?.initialized?.value == true) return
-        if (availableOCRPlugins.containsKey(pluginId)) {
-            ConfigManager.savePluginConfig(ConfigManager.pluginConfig.copy(ocrPluginId = pluginId))
+        if (availableOCRPlugins.containsKey(pluginMetadata)) {
+            ConfigManager.savePluginConfig(ConfigManager.pluginConfig.copy(ocrPluginId = pluginMetadata.pluginId))
             getOCRPlugin().getOrNull()?.unselected()
-            _ocrPlugin.value = kotlin.runCatching { (availableOCRPlugins[pluginId]!!).apply { selected() } }
+            _ocrPlugin.value = kotlin.runCatching { (availableOCRPlugins[pluginMetadata]!!).apply { selected() } }
             saveConfig()
         }
     }
@@ -158,9 +172,9 @@ object PluginManager {
     private fun saveConfig() {
         ConfigManager.savePluginConfig(
             ConfigManager.pluginConfig.copy(
-                captureScreenPluginId = getCaptureScreenPlugin().getOrNull()?.pluginId,
-                storagePluginId = getStoragePlugin().getOrNull()?.pluginId,
-                ocrPluginId = getOCRPlugin().getOrNull()?.pluginId
+                captureScreenPluginId = getCaptureScreenPlugin().getOrNull()?.metadata?.pluginId,
+                storagePluginId = getStoragePlugin().getOrNull()?.metadata?.pluginId,
+                ocrPluginId = getOCRPlugin().getOrNull()?.metadata?.pluginId
             )
         )
         ologger.info { "SaveConfig" }
@@ -174,15 +188,15 @@ object PluginManager {
             _needJumpConfigUI.value = true
             return
         }
-        captureScreenPlugin.tryInit().apply {
+        captureScreenPlugin.tryInit(PluginContextImpl(captureScreenPlugin.metadata)).apply {
             if (this is PluginBasic.InitResult.Failed || this is PluginBasic.InitResult.RequestConfigUI) _needJumpConfigUI.value = true
             if (this is PluginBasic.InitResult.Failed) ologger.error(exception) { "Try to init CaptureScreenPlugin catch: ${exception.message}" }
         }
-        storagePlugin.tryInit().apply {
+        storagePlugin.tryInit(PluginContextImpl(storagePlugin.metadata)).apply {
             if (this is PluginBasic.InitResult.Failed || this is PluginBasic.InitResult.RequestConfigUI) _needJumpConfigUI.value = true
             if (this is PluginBasic.InitResult.Failed) ologger.error(exception) { "Try to init StoragePlugin catch: ${exception.message}" }
         }
-        ocrPlugin.tryInit().apply {
+        ocrPlugin.tryInit(PluginContextImpl(ocrPlugin.metadata)).apply {
             if (this is PluginBasic.InitResult.Failed || this is PluginBasic.InitResult.RequestConfigUI) _needJumpConfigUI.value = true
             if (this is PluginBasic.InitResult.Failed) ologger.error(exception) { "Try to init OCRPlugin catch: ${exception.message}" }
         }
@@ -197,3 +211,5 @@ object PluginManager {
         return captureScreenPluginInitialized && storagePluginInitialized && ocrPluginInitialized
     }
 }
+
+suspend fun PluginBasic.tryInit() = tryInit(PluginContextImpl(metadata))
