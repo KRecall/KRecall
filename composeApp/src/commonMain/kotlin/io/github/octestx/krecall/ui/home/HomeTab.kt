@@ -4,10 +4,8 @@ import TimestampRateController
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,6 +19,7 @@ import io.github.octestx.krecall.GlobalRecalling
 import io.github.octestx.krecall.plugins.PluginManager
 import io.github.octestx.krecall.repository.ConfigManager
 import io.github.octestx.krecall.repository.DataDB
+import io.github.octestx.krecall.ui.utils.FloatingBlock
 import io.klogging.noCoLogger
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.ExperimentalResourceApi
@@ -28,27 +27,29 @@ import org.jetbrains.compose.resources.decodeToImageBitmap
 
 class HomeTab(model: HomePageModel): AbsUIPage<Any?, HomeTab.HomePageState, HomeTab.HomePageAction>(model) {
     private val ologger = noCoLogger<HomeTab>()
-    @OptIn(ExperimentalResourceApi::class)
     @Composable
     override fun UI(state: HomePageState) {
         MaterialTheme {
             StepLoadAnimation(5) { step ->
                 Row(Modifier.background(MaterialTheme.colorScheme.background)) {
-                    Column(Modifier.weight(1f)) {
-                        Row {
-                            if (step >= 1) {
-                                DelayShowAnimation {
-                                    CaptureScreenController(state)
-                                    Spacer(Modifier.padding(12.dp).height(6.dp).background(MaterialTheme.colorScheme.onBackground).align(Alignment.CenterVertically))
+                    Column(Modifier.weight(1f).verticalScroll(state.scrollState)) {
+                        FloatingBlock(Modifier.fillMaxWidth().padding(5.dp)) {
+                            Row {
+                                if (step >= 1) {
+                                    DelayShowAnimation {
+                                        CaptureScreenController(state)
+                                        VerticalDivider()
+//                                        Spacer(Modifier.padding(12.dp).height(6.dp).background(MaterialTheme.colorScheme.onBackground).align(Alignment.CenterVertically))
+                                    }
                                 }
-                            }
-                            if (step >= 2) {
-                                DelayShowAnimation {
-                                    ProcessImageController(state)
+                                if (step >= 2) {
+                                    DelayShowAnimation {
+                                        ProcessImageController(state)
+                                    }
                                 }
                             }
                         }
-                        Column(modifier = Modifier.verticalScroll(state.scrollState).padding(5.dp)) {
+                        Column(modifier = Modifier.padding(5.dp)) {
                             if (state.selectedTimestampIndex >= 0 && step >= 3) {
                                 // 添加时间戳控制器
                                 DelayShowAnimation {
@@ -79,7 +80,9 @@ class HomeTab(model: HomePageModel): AbsUIPage<Any?, HomeTab.HomePageState, Home
                             if (step >= 5) {
                                 Column(modifier = Modifier.fillMaxSize().border(border = BorderStroke(2.dp, MaterialTheme.colorScheme.secondary), shape = MaterialTheme.shapes.medium).padding(5.dp)) {
                                     Text("Data:", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                                    Text(state.currentData, style = MaterialTheme.typography.bodySmall)
+                                    SelectionContainer {
+                                        Text(state.currentData, style = MaterialTheme.typography.bodySmall)
+                                    }
                                 }
                             }
                         }

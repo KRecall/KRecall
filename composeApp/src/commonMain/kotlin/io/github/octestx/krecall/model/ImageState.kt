@@ -12,5 +12,5 @@ sealed class ImageState {
         }
     }
 
-    data object Error : ImageState()
+    data class Error(val cause: Throwable) : ImageState()
 }

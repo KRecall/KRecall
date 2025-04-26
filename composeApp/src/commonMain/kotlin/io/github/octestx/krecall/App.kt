@@ -17,6 +17,7 @@ import io.github.octestx.krecall.plugins.PluginManager
 import io.github.octestx.krecall.repository.ConfigManager
 import io.github.octestx.krecall.ui.TimestampViewPage
 import io.github.octestx.krecall.ui.home.HomePage
+import io.github.octestx.krecall.ui.setting.SettingPage
 import io.github.octestx.krecall.ui.tour.LoadingPage
 import io.github.octestx.krecall.ui.tour.PluginConfigPage
 import io.github.octestx.krecall.ui.tour.RecallSettingPage
@@ -156,6 +157,27 @@ class AppMainPage(model: AppMainPageModel): AbsUIPage<Any?, AppMainPage.AppMainP
                             TimestampViewPage(model)
                         }
                         page.Main(modelData)
+                    }
+                    scene(
+                        route = "/setting",
+                        navTransition = NavTransition(),
+                    ) {
+                        val model = rememberSaveable {
+                            SettingPage.SettingPageModel(
+                                navigate = { target ->
+                                    state.navigator.navigate(target)
+                                }, putNavData = { key, value ->
+                                    state.navDataExchangeCache[key] = value
+
+                                }, goBack = {
+                                    state.navigator.goBack()
+                                }
+                            )
+                        }
+                        val page = rememberSaveable {
+                            SettingPage(model)
+                        }
+                        page.Main(Unit)
                     }
                 }
 

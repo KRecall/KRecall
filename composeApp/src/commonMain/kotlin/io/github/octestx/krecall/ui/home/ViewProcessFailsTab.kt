@@ -1,5 +1,6 @@
 package io.github.octestx.krecall.ui.home
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
@@ -25,6 +26,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import io.github.octestx.basic.multiplatform.ui.ui.core.AbsUIPage
+import io.github.octestx.basic.multiplatform.ui.ui.toast
+import io.github.octestx.basic.multiplatform.ui.ui.utils.ToastModel
 import io.github.octestx.krecall.GlobalRecalling
 import io.github.octestx.krecall.model.ImageState
 import io.github.octestx.krecall.plugins.PluginManager
@@ -56,42 +59,42 @@ class ViewProcessFailsTab(model: ViewProcessFailsPageModel): AbsUIPage<Any?, Vie
                             state.action(ViewProcessFailsPageAction.JumpView(item))
                         }) {
                             val timestamp = item.timestamp
-                            var imgState: ImageState by rememberSaveable(timestamp) { mutableStateOf(ImageState.Loading) }
-                            when (imgState) {
-                                ImageState.Error -> {
-                                    Text("ERROR!")
-                                }
-                                ImageState.Loading -> {
-                                    CircularProgressIndicator()
-                                }
-                                is ImageState.Success -> {
-                                    AsyncImage((imgState as ImageState.Success).bytes, null, contentScale = ContentScale.FillWidth)
+                            var imageState: ImageState by rememberSaveable(timestamp) { mutableStateOf(ImageState.Loading) }
+                            AnimatedContent(imageState) { imgState ->
+                                when (imgState) {
+                                    is ImageState.Error -> {
+                                        Text("ERROR!")
+                                        LaunchedEffect(imgState) {
+                                            toast.applyShow("ViewProcessFailsTab图片无法渲染: ${imgState.cause.message}", type = ToastModel.Type.Error)
+                                        }
+                                    }
+                                    ImageState.Loading -> {
+                                        CircularProgressIndicator()
+                                    }
+                                    is ImageState.Success -> {
+                                        AsyncImage(imgState.bytes, null, contentScale = ContentScale.FillWidth)
+                                    }
                                 }
                             }
                             LaunchedEffect(timestamp) {
-                                if (imgState is ImageState.Success) {
+                                if (imageState is ImageState.Success) {
                                     return@LaunchedEffect
                                 }
-                                if (GlobalRecalling.imageCache.containsKey(timestamp)) {
-                                    imgState = ImageState.Success(GlobalRecalling.imageCache[timestamp]!!)
-                                    return@LaunchedEffect
-                                }
-
-                                imgState = try {
-                                    withContext(GlobalRecalling.imageLoadingDispatcher) {
-                                        val bytes = GlobalRecalling.imageCache.getOrPut(timestamp) {
-                                            PluginManager.getStoragePlugin().getOrNull()
-                                                ?.getScreenData(timestamp)
-                                                ?.getOrNull()
-                                        }
-                                        if (bytes == null) {
-                                            ImageState.Error
-                                        } else {
-                                            ImageState.Success(bytes)
-                                        }
+                                imageState = try {
+                                    val bytes = GlobalRecalling.getImageFromCache(timestamp) {
+                                        PluginManager.getStoragePlugin().getOrNull()
+                                            ?.getScreenData(timestamp)
+                                            ?.getOrNull()
+                                    }
+                                    if (bytes == null) {
+                                        ologger.error(NullPointerException("getImageFromCache不存在数据"))
+                                        ImageState.Error(NullPointerException("getImageFromCache不存在数据"))
+                                    } else {
+                                        ImageState.Success(bytes)
                                     }
                                 } catch (e: Exception) {
-                                    ImageState.Error
+                                    ologger.error(e)
+                                    ImageState.Error(e)
                                 }
                             }
 

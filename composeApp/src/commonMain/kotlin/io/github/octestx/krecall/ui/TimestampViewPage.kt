@@ -16,6 +16,8 @@ import compose.icons.TablerIcons
 import compose.icons.tablericons.ArrowBack
 import compose.icons.tablericons.Download
 import io.github.octestx.basic.multiplatform.ui.ui.core.AbsUIPage
+import io.github.octestx.basic.multiplatform.ui.ui.toast
+import io.github.octestx.basic.multiplatform.ui.ui.utils.ToastModel
 import io.github.octestx.basic.multiplatform.ui.utils.highlightText
 import io.github.octestx.krecall.GlobalRecalling
 import io.github.octestx.krecall.model.ImageState
@@ -25,7 +27,6 @@ import io.github.vinceglb.filekit.dialogs.compose.rememberFileSaverLauncher
 import io.github.vinceglb.filekit.write
 import io.klogging.noCoLogger
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import models.sqld.DataItem
 
 class TimestampViewPage(model: TimestampViewPageModel): AbsUIPage<TimestampViewPageModelData, TimestampViewPage.TimestampViewPageState, TimestampViewPage.TimestampViewPageAction>(model) {
@@ -58,8 +59,11 @@ class TimestampViewPage(model: TimestampViewPageModel): AbsUIPage<TimestampViewP
                     Column(modifier = Modifier.verticalScroll(scrollState)) {
                         Column(Modifier.padding(5.dp).border(border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary)).padding(5.dp)) {
                             when (state.imageState) {
-                                ImageState.Error -> {
+                                is ImageState.Error -> {
                                     Text("ERROR!")
+                                    LaunchedEffect(state.imageState) {
+                                        toast.applyShow("TimestampViewPage图片无法渲染: ${state.imageState.cause.message}", type = ToastModel.Type.Error)
+                                    }
                                 }
                                 ImageState.Loading -> {
                                     CircularProgressIndicator()
@@ -84,25 +88,24 @@ class TimestampViewPage(model: TimestampViewPageModel): AbsUIPage<TimestampViewP
                                 }
                             }
                         }
-                        if (state.dataItem.status == 0L || state.dataItem.status == 1L) {
-                            Text(
-                                text = if (state.dataItem.data_ == null) {
-                                    AnnotatedString("NULL")
-                                } else {
-                                    highlightText(
-                                        text = state.dataItem.data_,
-                                        highlightColor = MaterialTheme.colorScheme.primary,
-                                        highlights = state.highlights
-                                    )
-                                },
-                                modifier = Modifier.padding(8.dp).border(border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary), shape = MaterialTheme.shapes.medium).padding(5.dp),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                        } else if (state.dataItem.status == 2L) {
-//                        val err = exceptionSerializableOjson.decodeFromString<AIResult.Failed<String>>(state.dataItem.error!!)
-                            val err = state.dataItem.error!!
-                            SelectionContainer {
+                        SelectionContainer {
+                            if (state.dataItem.status == 0L || state.dataItem.status == 1L) {
+                                Text(
+                                    text = if (state.dataItem.data_ == null) {
+                                        AnnotatedString("NULL")
+                                    } else {
+                                        highlightText(
+                                            text = state.dataItem.data_,
+                                            highlightColor = MaterialTheme.colorScheme.primary,
+                                            highlights = state.highlights
+                                        )
+                                    },
+                                    modifier = Modifier.padding(8.dp).border(border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary), shape = MaterialTheme.shapes.medium).padding(5.dp),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onBackground
+                                )
+                            } else if (state.dataItem.status == 2L) {
+                                val err = state.dataItem.error!!
                                 Text(
                                     text = err,
                                     modifier = Modifier.padding(8.dp),
@@ -148,26 +151,21 @@ class TimestampViewPage(model: TimestampViewPageModel): AbsUIPage<TimestampViewP
         @Composable
         override fun CreateState(params: TimestampViewPageModelData): TimestampViewPageState {
             LaunchedEffect(Unit) {
-                if (GlobalRecalling.imageCache.containsKey(params.dataItem.timestamp)) {
-                    imgState = ImageState.Success(GlobalRecalling.imageCache[params.dataItem.timestamp]!!)
-                    return@LaunchedEffect
-                }
-
                 imgState = try {
-                    withContext(GlobalRecalling.imageLoadingDispatcher) {
-                        val bytes = GlobalRecalling.imageCache.getOrPut(params.dataItem.timestamp) {
-                            PluginManager.getStoragePlugin().getOrNull()
-                                ?.getScreenData(params.dataItem.timestamp)
-                                ?.getOrNull()
-                        }
-                        if (bytes == null) {
-                            ImageState.Error
-                        } else {
-                            ImageState.Success(bytes)
-                        }
+                    val bytes = GlobalRecalling.getImageFromCache(params.dataItem.timestamp) {
+                        PluginManager.getStoragePlugin().getOrNull()
+                            ?.getScreenData(params.dataItem.timestamp)
+                            ?.getOrNull()
+                    }
+                    if (bytes == null) {
+                        ologger.error(NullPointerException("getImageFromCache不存在数据"))
+                        ImageState.Error(NullPointerException("getImageFromCache不存在数据"))
+                    } else {
+                        ImageState.Success(bytes)
                     }
                 } catch (e: Exception) {
-                    ImageState.Error
+                    ologger.error(e)
+                    ImageState.Error(e)
                 }
             }
             return TimestampViewPageState(params.dataItem, params.highlights, imgState) {

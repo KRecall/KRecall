@@ -1,3 +1,4 @@
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -78,18 +79,22 @@ fun TimestampRateController(
                 Icon(TablerIcons.Run, contentDescription = null, tint = if (theNowMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary)
             }
             // 倍率指示器
-            Text(
-                text = "×${abs(speedMultiplier).format(1)} ${if(speedMultiplier>0)"▶" else "◀"}",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                modifier = Modifier.align(Alignment.CenterVertically)
-            )
+            AnimatedContent(speedMultiplier) { speed ->
+                Text(
+                    text = "×${abs(speed).format(1)} ${if(speed>0)"▶" else if (speed<0)"◀" else ""}",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                    modifier = Modifier.align(Alignment.CenterVertically)
+                )
+            }
             IconButton(onClick = {
                 val newIndex = currentIndex - 50
                 if (newIndex >= 0) {
                     changeIndex(newIndex)
+                } else {
+                    changeIndex(0)
                 }
-            }, enabled = currentIndex - 50 >= 0) {
+            }, enabled = currentIndex - 1 >= 0) {
                 Icon(
                     imageVector = TablerIcons.ArrowLeft,
                     contentDescription = null,
@@ -124,8 +129,10 @@ fun TimestampRateController(
                 val newIndex = currentIndex + 100
                 if (newIndex <= timestamps.lastIndex) {
                     changeIndex(newIndex)
+                } else {
+                    changeIndex(timestamps.lastIndex)
                 }
-            }, enabled = currentIndex + 100 <= timestamps.lastIndex) {
+            }, enabled = currentIndex + 1 <= timestamps.lastIndex) {
                 Icon(
                     imageVector = TablerIcons.ArrowRight,
                     contentDescription = null,

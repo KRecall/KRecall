@@ -1,5 +1,6 @@
 package io.github.octestx.krecall.ui.home
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -12,7 +13,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -22,18 +22,22 @@ import coil3.compose.AsyncImage
 import compose.icons.TablerIcons
 import compose.icons.tablericons.Send
 import io.github.octestx.basic.multiplatform.ui.ui.core.AbsUIPage
+import io.github.octestx.basic.multiplatform.ui.ui.toast
 import io.github.octestx.basic.multiplatform.ui.ui.utils.DelayShowAnimation
 import io.github.octestx.basic.multiplatform.ui.ui.utils.StepLoadAnimation
+import io.github.octestx.basic.multiplatform.ui.ui.utils.ToastModel
 import io.github.octestx.krecall.GlobalRecalling
 import io.github.octestx.krecall.model.ImageState
 import io.github.octestx.krecall.plugins.PluginManager
 import io.github.octestx.krecall.repository.DataDB
+import io.github.octestx.krecall.utils.WaitingFlow
 import io.klogging.noCoLogger
 import kotlinx.coroutines.*
 import models.sqld.DataItem
 
 class SearchTab(model: SearchPageModel): AbsUIPage<Any?, SearchTab.SearchPageState, SearchTab.SearchPageAction>(model) {
     private val ologger = noCoLogger<SearchTab>()
+    val waitingFlow = WaitingFlow()
     @Composable
     override fun UI(state: SearchPageState) {
         MaterialTheme {
@@ -45,7 +49,7 @@ class SearchTab(model: SearchPageModel): AbsUIPage<Any?, SearchTab.SearchPageSta
                             derivedStateOf { state.searchResult.isNotEmpty() }
                         }
                         AnimatedVisibility(showResultCount) {
-                            Text("Search result: ${state.searchResult.size}")
+                            Text("Search result: ${state.searchResult.size}", modifier = Modifier.padding(8.dp))
                         }
                         SearchBar(step, state)
 
@@ -143,60 +147,67 @@ class SearchTab(model: SearchPageModel): AbsUIPage<Any?, SearchTab.SearchPageSta
             state.action(SearchPageAction.JumpView(item))
         }) {
             val timestamp = item.timestamp
-            var imgState: ImageState by rememberSaveable(timestamp) {
+            var imgState: ImageState by remember(timestamp) {
                 mutableStateOf(
                     ImageState.Loading
                 )
             }
-            when (imgState) {
-                ImageState.Error -> {
-                    Text("ERROR!", color = MaterialTheme.colorScheme.error)
-                }
-
-                ImageState.Loading -> {
-                    CircularProgressIndicator()
-                }
-
-                is ImageState.Success -> {
-                    AsyncImage(
-                        (imgState as ImageState.Success).bytes,
-                        null,
-                        contentScale = ContentScale.FillWidth
-                    )
-                }
+            var show by remember(timestamp) {
+                mutableStateOf(false)
             }
-            LaunchedEffect(timestamp) {
-                if (imgState is ImageState.Success) {
-                    return@LaunchedEffect
-                }
-                if (GlobalRecalling.imageCache.containsKey(timestamp)) {
-                    imgState = ImageState.Success(GlobalRecalling.imageCache[timestamp]!!)
-                    return@LaunchedEffect
-                }
-
-                imgState = try {
-                    withContext(GlobalRecalling.imageLoadingDispatcher) {
-                        val bytes = GlobalRecalling.imageCache.getOrPut(timestamp) {
-                            PluginManager.getStoragePlugin().getOrNull()
-                                ?.getScreenData(timestamp)
-                                ?.getOrNull()
+            AnimatedVisibility(show) {
+                AnimatedContent(imgState) { imageState ->
+                    when (imageState) {
+                        is ImageState.Error -> {
+                            Text("ERROR!", color = MaterialTheme.colorScheme.error)
+                            LaunchedEffect(imageState) {
+                                toast.applyShow("SearchTab图片无法渲染: ${imageState.cause.message}", type = ToastModel.Type.Error)
+                            }
                         }
-                        if (bytes == null) {
-                            ImageState.Error
-                        } else {
-                            ImageState.Success(bytes)
+                        ImageState.Loading -> {
+                            CircularProgressIndicator()
+                        }
+                        is ImageState.Success -> {
+                            AsyncImage(
+                                imageState.bytes,
+                                null,
+                                contentScale = ContentScale.FillWidth
+                            )
                         }
                     }
-                } catch (e: Exception) {
-                    ImageState.Error
                 }
             }
-
             // ✅ 使用派生状态减少文本计算
             val displayText by remember(item.data_) {
                 derivedStateOf { item.data_?.take(150) ?: "NULL" }
             }
             Text(text = displayText, maxLines = 3)
+            LaunchedEffect(timestamp) {
+                waitingFlow.wait()
+                show = true
+            }
+            LaunchedEffect(timestamp) {
+                if (imgState is ImageState.Success) {
+                    return@LaunchedEffect
+                }
+
+                imgState = try {
+                    val bytes = GlobalRecalling.getImageFromCache(timestamp) {
+                        PluginManager.getStoragePlugin().getOrNull()
+                            ?.getScreenData(timestamp)
+                            ?.getOrNull()
+                    }
+                    if (bytes == null) {
+                        ologger.error(NullPointerException("getImageFromCache不存在数据[timestamp=$timestamp]"))
+                        ImageState.Error(NullPointerException("getImageFromCache不存在数据[timestamp=$timestamp]"))
+                    } else {
+                        ImageState.Success(bytes)
+                    }
+                } catch (e: Exception) {
+                    ologger.error(e)
+                    ImageState.Error(e)
+                }
+            }
         }
     }
     sealed class SearchPageAction : AbsUIAction() {

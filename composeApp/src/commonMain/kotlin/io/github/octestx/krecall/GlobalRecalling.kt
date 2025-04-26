@@ -10,11 +10,8 @@ import io.github.octestx.krecall.plugins.basic.exceptionSerializableOjson
 import io.github.octestx.krecall.repository.ConfigManager
 import io.github.octestx.krecall.repository.DataDB
 import io.klogging.noCoLogger
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.launch
 
 object GlobalRecalling {
     private val ologger = noCoLogger<GlobalRecalling>()
@@ -30,11 +27,36 @@ object GlobalRecalling {
     //Timestamp
     val processingDataList = ObservableLinkedList<Long>()
 
-    val imageLoadingDispatcher = Dispatchers.IO.limitedParallelism(4)
-    private const val MaxCacheSize = 100
-    val imageCache: MutableMap<Long, ByteArray?> = object : LinkedHashMap<Long, ByteArray?>(MaxCacheSize, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Long, ByteArray?>): Boolean {
-            return size > MaxCacheSize
+    private val imageLoadingDispatcher = Dispatchers.IO.limitedParallelism(10)
+    private const val MAX_CACHE_SIZE = 100
+    suspend fun putImageToCache(timestamp: Long, recreate: suspend () -> ByteArray) {
+        withContext(imageLoadingDispatcher) {
+            imageCreatorCache[timestamp] = recreate
+            imageCache[timestamp] = recreate()
+        }
+    }
+    suspend fun getImageFromCache(timestamp: Long, recreate: (suspend () -> ByteArray?)? = null): ByteArray? {
+        return withContext(imageLoadingDispatcher) {
+            val cache = imageCache[timestamp]
+            if (cache == null) {
+                val creator = imageCreatorCache[timestamp]
+                val created = if (creator != null) {
+                    creator()
+                } else {
+                    if (recreate != null) recreate()
+                    else null
+                }
+                if (created != null) {
+                    imageCache[timestamp] = created
+                }
+                created
+            } else cache
+        }
+    }
+    private val imageCreatorCache: MutableMap<Long, suspend () -> ByteArray> = mutableMapOf()
+    private val imageCache: MutableMap<Long, ByteArray> = object : LinkedHashMap<Long, ByteArray>(MAX_CACHE_SIZE, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Long, ByteArray>): Boolean {
+            return size > MAX_CACHE_SIZE
         }
     }.synchronized() // 添加线程安全包装
 

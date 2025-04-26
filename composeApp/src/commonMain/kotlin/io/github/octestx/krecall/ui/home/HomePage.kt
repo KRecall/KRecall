@@ -1,31 +1,21 @@
 package io.github.octestx.krecall.ui.home
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import compose.icons.TablerIcons
+import compose.icons.tablericons.Settings
 import io.github.octestx.basic.multiplatform.ui.ui.core.AbsUIPage
-import io.github.octestx.basic.multiplatform.ui.ui.theme.ThemeRepository
-import io.github.octestx.basic.multiplatform.ui.ui.toast
-import io.github.octestx.basic.multiplatform.ui.ui.utils.EnhancedDropdownSelector
 import io.github.octestx.krecall.GlobalRecalling
-import io.github.octestx.krecall.composeapp.generated.resources.Res
-import io.github.octestx.krecall.composeapp.generated.resources.developer_avatar
-import io.github.octestx.krecall.repository.ConfigManager
 import io.github.octestx.krecall.ui.TimestampViewPage
 import io.klogging.noCoLogger
 import org.jetbrains.compose.resources.InternalResourceApi
-import org.jetbrains.compose.resources.painterResource
-import kotlin.system.exitProcess
 
 class HomePage(model: HomePageModel): AbsUIPage<Any?, HomePage.HomePageState, HomePage.HomePageAction>(model) {
     private val ologger = noCoLogger<HomePage>()
@@ -33,89 +23,92 @@ class HomePage(model: HomePageModel): AbsUIPage<Any?, HomePage.HomePageState, Ho
     @Composable
     override fun UI(state: HomePageState) {
         val drawerState = rememberDrawerState(DrawerValue.Closed)
+        var currentTabIndex by rememberSaveable { mutableStateOf(0) } // 当前选中Tab索引
 //        BackHandler(enabled = drawerState.isOpen) {
 //            scope.launch { drawerState.close() }
 //        }
         ModalNavigationDrawer(
             drawerState = drawerState,
             drawerContent = {
-                Column(Modifier.fillMaxHeight().background(MaterialTheme.colorScheme.background.copy(alpha = 0.95f)).padding(16.dp)) {
-                    Text("KRecall", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
-                    Image(
-                        painter = painterResource(Res.drawable.developer_avatar),
-                        contentDescription = "App Logo",
-                        modifier = Modifier.padding(16.dp).size(120.dp).clip(MaterialTheme.shapes.medium)
-                    )
-                    Text("Code by OCTest", color = MaterialTheme.colorScheme.primary)
-                    Button(onClick = {
-                        ConfigManager.save(ConfigManager.config.copy(initPlugin = false))
-                        toast.applyShow("重启生效")
-                    }) {
-                        Text("重新配置插件")
-                    }
-                    val currentThemeKey = ThemeRepository.currentTheme.first
-                    val availableThemeKey = remember { ThemeRepository.allTheme.keys.toList() }
-                    var whenHoverTmpSaveResThemeKey: String? by rememberSaveable { mutableStateOf(null) }
-                    EnhancedDropdownSelector(
-                        availableThemeKey,
-                        selectedItem = if (whenHoverTmpSaveResThemeKey != null) whenHoverTmpSaveResThemeKey else currentThemeKey,
-                        onItemSelected = {
-                            ThemeRepository.switchTheme(it)
-                        },
-                        onHover = {
-                            if (whenHoverTmpSaveResThemeKey == null) {
-                                whenHoverTmpSaveResThemeKey = it
-                            }
-                            if (currentThemeKey != it) {
-                                ThemeRepository.switchTheme(it)
-                            }
-                        },
-                        onExitHover = {
-                            whenHoverTmpSaveResThemeKey?.let {
-                                ThemeRepository.switchTheme(it)
-                                whenHoverTmpSaveResThemeKey = null
-                            }
+                ModalDrawerSheet {
+                    Text("KRecall", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(16.dp))
+                    Button(
+                        onClick = {
+                            state.action(HomePageAction.Navigate("/setting"))
+                        }, modifier = Modifier.padding(horizontal = 6.dp)
+                    ) {
+                        Row {
+                            Icon(TablerIcons.Settings, contentDescription = "Settings")
+                            Text("打开设置")
                         }
-                    )
-                    Button(onClick = {
-                        exitProcess(0)
-                    }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.onError)) {
-                        Text("终止KRecall进程", color = MaterialTheme.colorScheme.error, fontWeight = MaterialTheme.typography.bodyMedium.fontWeight)
                     }
+                    HorizontalDivider()
+                    // Tab导航栏
+                    NavigationDrawerItem(
+                        label = { Text(text = "Home") },
+                        selected = currentTabIndex == 0,
+                        onClick = { currentTabIndex = 0 },
+                        modifier = Modifier.padding(horizontal = 6.dp)
+                    )
+                    NavigationDrawerItem(
+                        label = { Text(text = "Search") },
+                        selected = currentTabIndex == 1,
+                        onClick = { currentTabIndex = 1 },
+                        modifier = Modifier.padding(horizontal = 6.dp)
+                    )
+
+                    val count = GlobalRecalling.errorTimestampCount.collectAsState().value
+                    NavigationDrawerItem(
+                        label = {
+                            AnimatedContent(count) {
+                                if (count > 0) {
+                                    Text("ViewProcessFails: $it")
+                                } else {
+                                    Text("No ViewProcessFails")
+                                }
+                            }
+                        },
+                        selected = currentTabIndex == 2,
+                        onClick = {
+                            if (count > 0) {
+                                currentTabIndex = 2
+                            }
+                        },
+                        modifier = Modifier.padding(horizontal = 6.dp)
+                    )
+                    // ...other drawer items
                 }
             }
         ) {
             Column {
-                // Tab导航栏
-                var currentTabIndex by rememberSaveable { mutableStateOf(0) } // 当前选中Tab索引
-                TabRow(selectedTabIndex = currentTabIndex) {
-                    Tab(
-                        selected = currentTabIndex == 0,
-                        onClick = { currentTabIndex = 0 }
-                    ) {
-                        Text("Home")
-                    }
-                    Tab(
-                        selected = currentTabIndex == 1,
-                        onClick = { currentTabIndex = 1 }
-                    ) {
-                        Text("Search")
-                    }
-                    val count = GlobalRecalling.errorTimestampCount.collectAsState().value
-                    Tab(
-                        selected = currentTabIndex == 2,
-                        onClick = { currentTabIndex = 2 },
-                        enabled = count > 0
-                    ) {
-                        AnimatedContent(count) {
-                            if (count > 0) {
-                                Text("ViewProcessFails: $it")
-                            } else {
-                                Text("No ViewProcessFails")
-                            }
-                        }
-                    }
-                }
+//                TabRow(selectedTabIndex = currentTabIndex) {
+//                    Tab(
+//                        selected = currentTabIndex == 0,
+//                        onClick = {  }
+//                    ) {
+//                        Text("Home")
+//                    }
+//                    Tab(
+//                        selected = currentTabIndex == 1,
+//                        onClick = { currentTabIndex = 1 }
+//                    ) {
+//                        Text("Search")
+//                    }
+//                    val count = GlobalRecalling.errorTimestampCount.collectAsState().value
+//                    Tab(
+//                        selected = currentTabIndex == 2,
+//                        onClick = { currentTabIndex = 2 },
+//                        enabled = count > 0
+//                    ) {
+//                        AnimatedContent(count) {
+//                            if (count > 0) {
+//                                Text("ViewProcessFails: $it")
+//                            } else {
+//                                Text("No ViewProcessFails")
+//                            }
+//                        }
+//                    }
+//                }
                 val homeModel = rememberSaveable() { HomeTab.HomePageModel() }
                 val homeTab = rememberSaveable() { HomeTab(homeModel) }
 
