@@ -26,8 +26,6 @@ object PluginManager {
     private val _ocrPlugin: MutableStateFlow<Result<AbsOCRPlugin>> = MutableStateFlow(Result.failure(Exception("Plugin not loaded")))
     val ocrPlugin: StateFlow<Result<AbsOCRPlugin>> get() = _ocrPlugin
 
-    private val _storageFilterPlugins: MutableMap<PluginMetadata, AbsScreenStorageFilterPlugin> = mutableMapOf()
-
     private val _needJumpConfigUI: MutableStateFlow<Boolean> = MutableStateFlow(false)
 
     val needJumpConfigUI: StateFlow<Boolean> get() = _needJumpConfigUI
@@ -53,7 +51,6 @@ object PluginManager {
                 is AbsCaptureScreenPlugin -> _availableCaptureScreenPlugins[metadata] = plugin
                 is AbsStoragePlugin -> _availableStoragePlugins[metadata] = plugin
                 is AbsOCRPlugin -> _availableOCRPlugins[metadata] = plugin
-                is AbsScreenStorageFilterPlugin -> _storageFilterPlugins[metadata] = plugin
                 //TODO add new plugin type
                 else -> _allOtherPlugin[metadata] = plugin
             }

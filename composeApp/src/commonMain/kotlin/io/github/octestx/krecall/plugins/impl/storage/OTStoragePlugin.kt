@@ -1,20 +1,21 @@
 package io.github.octestx.krecall.plugins.impl.storage
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.Button
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import io.github.octestx.basic.multiplatform.common.utils.OS
-import io.github.octestx.basic.multiplatform.common.utils.linkFile
-import io.github.octestx.basic.multiplatform.common.utils.ojson
-import io.github.octestx.basic.multiplatform.common.utils.toKPath
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import io.github.octestx.basic.multiplatform.common.utils.*
 import io.github.octestx.basic.multiplatform.ui.ui.toast
+import io.github.octestx.basic.multiplatform.ui.ui.utils.StepLoadAnimation
 import io.github.octestx.basic.multiplatform.ui.ui.utils.ToastModel
 import io.github.octestx.krecall.exceptions.ConfigurationNotSavedException
 import io.github.octestx.krecall.plugins.basic.AbsStoragePlugin
+import io.github.octestx.krecall.plugins.basic.PluginContext
 import io.github.octestx.krecall.plugins.basic.PluginMetadata
 import io.klogging.noCoLogger
 import kotlinx.coroutines.Dispatchers
@@ -63,6 +64,7 @@ class OTStoragePlugin(metadata: PluginMetadata): AbsStoragePlugin(metadata) {
         val f = linkScreenFile(timestamp)
         if (f.exists()) f.delete()
         OTStorageDB.addNewRecord(timestamp, timestamp)
+        actuallyStorageScreenCount ++
         return f
     }
 
@@ -88,7 +90,8 @@ class OTStoragePlugin(metadata: PluginMetadata): AbsStoragePlugin(metadata) {
                     // 更新索引并删除当前文件
                     OTStorageDB.setFileTimestamp(timestamp, previousFileTimestamp)
                     linkScreenFile(timestamp).delete()
-                    ologger.info { "相似度${"%.2f".format(similarity*100)}% 超过阈值，已复用历史图片{并没有}" }
+                    actuallyStorageScreenCount --
+                    ologger.info { "相似度${"%.2f".format(similarity*100)}% 超过阈值，已复用历史图片" }
                 }
             }
         }
@@ -221,12 +224,57 @@ class OTStoragePlugin(metadata: PluginMetadata): AbsStoragePlugin(metadata) {
     }
 
 
-    override suspend fun tryInitInner(): InitResult {
+    override suspend fun tryInitInner(context: PluginContext): InitResult {
         ologger.info { "TryInit" }
         if (savedConfig.value.not()) {
             return InitResult.Failed(ConfigurationNotSavedException())
         }
         if (getScreenDir().canRead().not()) return InitResult.Failed(FileNotFoundException("Can't read: ${getScreenDir().absolutePath}"))
+
+        actuallyStorageScreenCount = getScreenDir().listFileNotDir().size
+
+        context.ability.setDrawerUI {
+            Card(Modifier.padding(8.dp)) {
+                val space = getStorageSpaceInfo()
+                Text("存储空间：${space.progress * 100}%", modifier = Modifier.padding(8.dp))
+                HorizontalDivider()
+                LinearProgressIndicator(
+                    progress = { space.progress },
+                    modifier = Modifier.padding(8.dp).fillMaxWidth(),
+                )
+            }
+        }
+        context.ability.addMainTab("OTStorage") {
+            StepLoadAnimation(6) { step ->
+                Column {
+                    AnimatedVisibility(step >= 1) {
+                        Text("OTStorage", modifier = Modifier.padding(8.dp), style = MaterialTheme.typography.titleLarge)
+                    }
+                    AnimatedVisibility(step >= 2) {
+                        Card(Modifier.padding(8.dp)) {
+                            val space = getStorageSpaceInfo()
+                            Text("存储空间：${space.progress * 100}%", modifier = Modifier.padding(8.dp))
+                            AnimatedVisibility(step >= 3) {
+                                Text("${storage(space.usedSpace)} / ${storage(space.totalSpace)}")
+                            }
+                            AnimatedVisibility(step >= 4) {
+                                HorizontalDivider()
+                            }
+                            AnimatedVisibility(step >= 5) {
+                                LinearProgressIndicator(
+                                    progress = { space.progress },
+                                    modifier = Modifier.padding(8.dp).fillMaxWidth(),
+                                )
+                            }
+                            AnimatedVisibility(step >= 6) {
+                                Text("实际存储截屏数量: $actuallyStorageScreenCount", modifier = Modifier.padding(8.dp))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         ologger.info { "Initialized" }
         _initialized.value = true
         return InitResult.Success
@@ -238,5 +286,21 @@ class OTStoragePlugin(metadata: PluginMetadata): AbsStoragePlugin(metadata) {
     private fun configDataChange() {
         savedConfig.value = false
         _initialized.value = false
+    }
+
+    private var actuallyStorageScreenCount by mutableStateOf(0)
+    private fun getStorageSpaceInfo(): StorageSpaceInfo {
+        val totalSpace = getScreenDir().totalSpace
+        val usableSpace = getScreenDir().usableSpace
+        return StorageSpaceInfo(totalSpace, usableSpace)
+    }
+    data class StorageSpaceInfo(
+        val totalSpace: Long,
+        val usableSpace: Long,
+    ) {
+        val progress: Float by lazy {
+            (usedSpace.toDouble() / totalSpace).toFloat()
+        }
+        val usedSpace = totalSpace - usableSpace
     }
 }

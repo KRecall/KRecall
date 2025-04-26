@@ -247,7 +247,7 @@ class OCRByZhiPuPlugin(metadata: PluginMetadata): AbsOCRPlugin(metadata) {
         }
     }
 
-    override suspend fun tryInitInner(): InitResult {
+    override suspend fun tryInitInner(context: PluginContext): InitResult {
 //        runBlocking { convert(File("/home/octest/Myself/tmp/Screenshot_20250301_234058.png").readBytes()) }
         val confined = config.apiKey.isNotEmpty() && config.model.isNotEmpty()
         if (savedConfig.value.not()) {

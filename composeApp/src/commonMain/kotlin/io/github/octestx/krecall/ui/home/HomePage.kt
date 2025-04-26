@@ -13,8 +13,11 @@ import compose.icons.TablerIcons
 import compose.icons.tablericons.Settings
 import io.github.octestx.basic.multiplatform.ui.ui.core.AbsUIPage
 import io.github.octestx.krecall.GlobalRecalling
+import io.github.octestx.krecall.plugins.PluginAbilityManager
 import io.github.octestx.krecall.ui.TimestampViewPage
 import io.klogging.noCoLogger
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.InternalResourceApi
 
 class HomePage(model: HomePageModel): AbsUIPage<Any?, HomePage.HomePageState, HomePage.HomePageAction>(model) {
@@ -22,13 +25,11 @@ class HomePage(model: HomePageModel): AbsUIPage<Any?, HomePage.HomePageState, Ho
     @OptIn(InternalResourceApi::class)
     @Composable
     override fun UI(state: HomePageState) {
-        val drawerState = rememberDrawerState(DrawerValue.Closed)
-        var currentTabIndex by rememberSaveable { mutableStateOf(0) } // 当前选中Tab索引
 //        BackHandler(enabled = drawerState.isOpen) {
 //            scope.launch { drawerState.close() }
 //        }
         ModalNavigationDrawer(
-            drawerState = drawerState,
+            drawerState = state.drawerState,
             drawerContent = {
                 ModalDrawerSheet {
                     Text("KRecall", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(16.dp))
@@ -42,18 +43,19 @@ class HomePage(model: HomePageModel): AbsUIPage<Any?, HomePage.HomePageState, Ho
                             Text("打开设置")
                         }
                     }
+                    PluginAbilityManager.ShaderDrawer()
                     HorizontalDivider()
                     // Tab导航栏
                     NavigationDrawerItem(
                         label = { Text(text = "Home") },
-                        selected = currentTabIndex == 0,
-                        onClick = { currentTabIndex = 0 },
+                        selected = state.currentTabIndex == 0,
+                        onClick = { state.action(HomePageAction.ChangeCurrentTabIndex(0)) },
                         modifier = Modifier.padding(horizontal = 6.dp)
                     )
                     NavigationDrawerItem(
                         label = { Text(text = "Search") },
-                        selected = currentTabIndex == 1,
-                        onClick = { currentTabIndex = 1 },
+                        selected = state.currentTabIndex == 1,
+                        onClick = { state.action(HomePageAction.ChangeCurrentTabIndex(1)) },
                         modifier = Modifier.padding(horizontal = 6.dp)
                     )
 
@@ -68,13 +70,19 @@ class HomePage(model: HomePageModel): AbsUIPage<Any?, HomePage.HomePageState, Ho
                                 }
                             }
                         },
-                        selected = currentTabIndex == 2,
+                        selected = state.currentTabIndex == 2,
                         onClick = {
                             if (count > 0) {
-                                currentTabIndex = 2
+                                state.action(HomePageAction.ChangeCurrentTabIndex(2))
                             }
                         },
                         modifier = Modifier.padding(horizontal = 6.dp)
+                    )
+
+                    PluginAbilityManager.ShaderExtMainTabs(
+                        startIndex = 3,
+                        currentIndex = state.currentTabIndex,
+                        changeIndex = { state.action(HomePageAction.ChangeCurrentTabIndex(it)) }
                     )
                     // ...other drawer items
                 }
@@ -130,7 +138,7 @@ class HomePage(model: HomePageModel): AbsUIPage<Any?, HomePage.HomePageState, Ho
                 }) }
                 val viewProcessFailsTab = rememberSaveable() { ViewProcessFailsTab(viewProcessFailsModel) }
                 // 内容区域
-                when (currentTabIndex) {
+                when (state.currentTabIndex) {
                     0 -> {
                         homeTab.Main(Unit)
                     }
@@ -140,6 +148,12 @@ class HomePage(model: HomePageModel): AbsUIPage<Any?, HomePage.HomePageState, Ho
                     2 -> {
                         viewProcessFailsTab.Main(Unit)
                     }
+                    else -> {
+                        PluginAbilityManager.ShaderExtMainTab(
+                            startIndex = 3,
+                            index = state.currentTabIndex,
+                        )
+                    }
                 }
             }
         }
@@ -148,8 +162,11 @@ class HomePage(model: HomePageModel): AbsUIPage<Any?, HomePage.HomePageState, Ho
     sealed class HomePageAction : AbsUIAction() {
         data class Navigate(val route: String): HomePageAction()
         data class PutNavData(val key: String, val value: Any?): HomePageAction()
+        data class ChangeCurrentTabIndex(val index: Int): HomePageAction()
     }
     data class HomePageState(
+        val drawerState: DrawerState,
+        val currentTabIndex: Int,
         val action: (HomePageAction) -> Unit,
     ): AbsUIState<HomePageAction>()
 
@@ -158,9 +175,13 @@ class HomePage(model: HomePageModel): AbsUIPage<Any?, HomePage.HomePageState, Ho
         private val putNavData: (String, Any?) -> Unit
     ): AbsUIModel<Any?, HomePageState, HomePageAction>() {
         val ologger = noCoLogger<HomePageModel>()
+        private val drawerState = DrawerState(DrawerValue.Closed) { true }
+        private var currentTabIndex by mutableStateOf(0) // 当前选中Tab索引
+        private lateinit var scope: CoroutineScope
         @Composable
         override fun CreateState(params: Any?): HomePageState {
-            return HomePageState() {
+            scope = rememberCoroutineScope()
+            return HomePageState(drawerState, currentTabIndex) {
                 actionExecute(params, it)
             }
         }
@@ -168,6 +189,14 @@ class HomePage(model: HomePageModel): AbsUIPage<Any?, HomePage.HomePageState, Ho
             when(action) {
                 is HomePageAction.Navigate -> navigate(action.route)
                 is HomePageAction.PutNavData -> putNavData(action.key, action.value)
+                is HomePageAction.ChangeCurrentTabIndex -> {
+                    currentTabIndex = action.index
+                    scope.launch {
+                        if (drawerState.isOpen) {
+                            drawerState.close()
+                        }
+                    }
+                }
             }
         }
     }

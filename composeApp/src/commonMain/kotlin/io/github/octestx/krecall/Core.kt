@@ -6,7 +6,7 @@ import io.github.octestx.basic.multiplatform.common.JVMInitCenter
 import io.github.octestx.basic.multiplatform.common.utils.checkSelfIsSingleInstance
 import io.github.octestx.basic.multiplatform.ui.JVMUIInitCenter
 import io.github.octestx.krecall.plugins.PluginManager
-import io.github.octestx.krecall.plugins.basic.PluginBasic
+import io.github.octestx.krecall.plugins.basic.PluginBasicExt
 import io.github.octestx.krecall.plugins.basic.PluginEnvironment
 import io.github.octestx.krecall.plugins.basic.PluginMetadata
 import io.github.octestx.krecall.repository.ConfigManager
@@ -39,7 +39,7 @@ object Core {
         config.configInnerAppDir(workDir)
         // 配置 Koin
         val injectPluginData = module {
-            scope(named(PluginBasic.KOIN_INJECT_SCOPE_NAME)) {
+            scope(named(PluginBasicExt.KOIN_INJECT_SCOPE_NAME)) {
                 scoped { (metadata: PluginMetadata) ->
                     PluginEnvironment(
                         FileTree.pluginData(metadata.pluginId).toFile().absoluteFile
