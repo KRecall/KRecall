@@ -4,6 +4,13 @@ CREATE TABLE IF NOT EXISTS OTStorageDBItem (
     mark TEXT DEFAULT NULL
 );
 
+createTable:
+CREATE TABLE IF NOT EXISTS OTStorageDBItem (
+    timestamp INTEGER NOT NULL PRIMARY KEY,
+    fileTimestamp INTEGER NOT NULL,
+    mark TEXT DEFAULT NULL
+);
+
 listAllData:
 SELECT * FROM OTStorageDBItem;
 

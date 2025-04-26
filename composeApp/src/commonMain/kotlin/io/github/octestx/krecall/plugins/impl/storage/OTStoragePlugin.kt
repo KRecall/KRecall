@@ -7,12 +7,12 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.*
-import io.github.kotlin.fibonacci.ui.toast
-import io.github.kotlin.fibonacci.ui.utils.ToastModel
-import io.github.kotlin.fibonacci.utils.OS
-import io.github.kotlin.fibonacci.utils.linkFile
-import io.github.kotlin.fibonacci.utils.ojson
-import io.github.kotlin.fibonacci.utils.toKPath
+import io.github.octestx.basic.multiplatform.common.utils.OS
+import io.github.octestx.basic.multiplatform.common.utils.linkFile
+import io.github.octestx.basic.multiplatform.common.utils.ojson
+import io.github.octestx.basic.multiplatform.common.utils.toKPath
+import io.github.octestx.basic.multiplatform.ui.ui.toast
+import io.github.octestx.basic.multiplatform.ui.ui.utils.ToastModel
 import io.github.octestx.krecall.exceptions.ConfigurationNotSavedException
 import io.github.octestx.krecall.plugins.basic.AbsStoragePlugin
 import io.github.octestx.krecall.plugins.basic.PluginMetadata
@@ -31,6 +31,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 class OTStoragePlugin(metadata: PluginMetadata): AbsStoragePlugin(metadata) {
+    private lateinit var imagePHash: ImagePHash
     companion object {
         val metadata = PluginMetadata(
             pluginId = "OTStoragePlugin",
@@ -51,7 +52,7 @@ class OTStoragePlugin(metadata: PluginMetadata): AbsStoragePlugin(metadata) {
         val imageSimilarityLimit: Float,
     )
     override suspend fun requireImageOutputStream(timestamp: Long): OutputStream = requireImageFileBitItNotExits(timestamp).apply { createNewFile() }.outputStream()
-    private fun getScreenFile(fileTimestamp: Long): File {
+    private fun linkScreenFile(fileTimestamp: Long): File {
         return File(getScreenDir(), "$fileTimestamp.png")
     }
     private fun getAudioFile(fileTimestamp: Long): File {
@@ -59,7 +60,7 @@ class OTStoragePlugin(metadata: PluginMetadata): AbsStoragePlugin(metadata) {
     }
 
     override suspend fun requireImageFileBitItNotExits(timestamp: Long): File {
-        val f = getScreenFile(timestamp)
+        val f = linkScreenFile(timestamp)
         if (f.exists()) f.delete()
         OTStorageDB.addNewRecord(timestamp, timestamp)
         return f
@@ -71,60 +72,65 @@ class OTStoragePlugin(metadata: PluginMetadata): AbsStoragePlugin(metadata) {
         return f.outputStream()
     }
 
-    override suspend fun processed(timestamp: Long) {
-        withContext(Dispatchers.IO) {
-            val store = Files.getFileStore(Paths.get(getScreenDir().absolutePath))
-            if (store.usableSpace < config.limitStorage) {
-                val list = listTimestampWithNotMark("Deleted").sorted()
-                //为了避免持续性清理，一次性清除1.5倍的数据
-                val needSpace = (config.limitStorage - store.usableSpace) * 1.5
-                var countSpace = 0L
-                val countedFiles = mutableListOf<Pair<Long, File>>()
-                for (itemTimeStamp in list) {
-                    val f = getScreenFile(itemTimeStamp)
-                    countSpace += f.length()
-                    countedFiles.add(itemTimeStamp to f)
-                    if (countSpace >= needSpace) break
-                }
-                for (f in countedFiles) {
-                    f.second.delete()
-                    mark(f.first, "Deleted")
-                    ologger.info { "DeleteFile: ${f.second.absolutePath}" }
-                }
-                ologger.info { "已清理$countSpace Bytes空间" }
-            }
-        }
+    override suspend fun processed(timestamp: Long) = withContext(Dispatchers.IO) {
+        checkSpace()
         val previousFileTimestamp = OTStorageDB.getPreviousData(timestamp)?.fileTimestamp
         if (previousFileTimestamp != null) {
             val currentImg = getScreenDataByFileTimestamp(timestamp).getOrNull()
             val previousImg = getScreenDataByFileTimestamp(previousFileTimestamp).getOrNull()
             if (currentImg != null && previousImg != null) {
-                val similarity = ImageUtils.calculateImageSimilarityCV(currentImg, previousImg)
-                ologger.info { "图片相似度检测结果: $similarity (${timestamp} vs ${previousFileTimestamp})" }
+                val distance = imagePHash.distance(currentImg, previousImg)
+                val similarity = imagePHash.toPercent(distance)
+                ologger.info { "图片相似度检测结果: ${similarity * 100}% [$distance] (${timestamp} vs ${previousFileTimestamp})" }
 
-                if (similarity > config.imageSimilarityLimit) {
+                if (similarity >= config.imageSimilarityLimit) {
                     //TODO 相似度算法残废
-//                    // 更新索引并删除当前文件
-//                    OTStorageDB.setFileTimestamp(timestamp, previousFileTimestamp)
-//                    getFile(timestamp).delete()
+                    // 更新索引并删除当前文件
+                    OTStorageDB.setFileTimestamp(timestamp, previousFileTimestamp)
+                    linkScreenFile(timestamp).delete()
                     ologger.info { "相似度${"%.2f".format(similarity*100)}% 超过阈值，已复用历史图片{并没有}" }
-                    return
                 }
             }
         }
         //TODO 图片优化存储
     }
 
-    override suspend fun getScreenData(timestamp: Long): Result<ByteArray> {
-        var fileTimestamp = OTStorageDB.getData(timestamp)?.fileTimestamp
-        //TODO以前的数据没有
-        if (fileTimestamp == null) {
-            fileTimestamp = timestamp
-            OTStorageDB.addNewRecord(timestamp, timestamp)
+    private suspend fun checkSpace() {
+        val store = withContext(Dispatchers.IO) {
+            Files.getFileStore(Paths.get(getScreenDir().absolutePath))
         }
-        return getScreenDataByFileTimestamp(fileTimestamp)
+        if (store.usableSpace < config.limitStorage) {
+            val list = listTimestampWithNotMark("Deleted").sorted()
+            //为了避免持续性清理，一次性清除1.5倍的数据
+            val needSpace = (config.limitStorage - store.usableSpace) * 1.5
+            var countSpace = 0L
+            val countedFiles = mutableListOf<Pair<Long, File>>()
+            for (itemTimeStamp in list) {
+                val f = linkScreenFile(itemTimeStamp)
+                countSpace += f.length()
+                countedFiles.add(itemTimeStamp to f)
+                if (countSpace >= needSpace) break
+            }
+            for (f in countedFiles) {
+                f.second.delete()
+                mark(f.first, "Deleted")
+                ologger.info { "DeleteFile: ${f.second.absolutePath}" }
+            }
+            ologger.info { "已清理$countSpace Bytes空间" }
+        }
     }
 
+    override suspend fun getScreenData(timestamp: Long): Result<ByteArray> {
+        var fileTimestamp = OTStorageDB.getData(timestamp)?.fileTimestamp
+//        //TODO以前的数据没有
+//        if (fileTimestamp == null) {
+//            fileTimestamp = timestamp
+//            OTStorageDB.addNewRecord(timestamp, timestamp)
+//        }
+        return getScreenDataByFileTimestamp(fileTimestamp!!)
+    }
+
+    // use storage dir timestamp, not record-timestamp
     private suspend fun getScreenDataByFileTimestamp(timestamp: Long): Result<ByteArray> {
         val f = File(getScreenDir(), "$timestamp.png")
         return if (f.exists()) Result.success(f.readBytes())
@@ -150,7 +156,9 @@ class OTStoragePlugin(metadata: PluginMetadata): AbsStoragePlugin(metadata) {
         ologger.info { "Loaded" }
     }
 
-    override fun selected() {}
+    override fun selected() {
+        imagePHash = ImagePHash()
+    }
     override fun unselected() {}
     private var savedConfig = MutableStateFlow(true)
     @Composable

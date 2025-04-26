@@ -12,9 +12,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.*
-import io.github.kotlin.fibonacci.SystemMessage
-import io.github.kotlin.fibonacci.utils.OS
-import io.github.kotlin.fibonacci.utils.ojson
+import io.github.octestx.basic.multiplatform.common.utils.OS
+import io.github.octestx.basic.multiplatform.common.utils.ojson
+import io.github.octestx.basic.multiplatform.ui.SystemMessage
 import io.github.octestx.krecall.composeapp.generated.resources.Res
 import io.github.octestx.krecall.composeapp.generated.resources.icon
 import io.github.octestx.krecall.model.InitConfig

@@ -1,6 +1,6 @@
 package io.github.octestx.krecall.repository
 
-import io.github.kotlin.fibonacci.utils.ojson
+import io.github.octestx.basic.multiplatform.common.utils.ojson
 import io.klogging.noCoLogger
 import kotlinx.serialization.Serializable
 import java.io.File

@@ -1,9 +1,9 @@
 package io.github.octestx.krecall.repository
 
-import io.github.kotlin.fibonacci.appDirs
-import io.github.kotlin.fibonacci.utils.asFilePath
-import io.github.kotlin.fibonacci.utils.link
-import io.github.kotlin.fibonacci.utils.linkDir
+import io.github.octestx.basic.multiplatform.common.appDirs
+import io.github.octestx.basic.multiplatform.common.utils.asKFilePath
+import io.github.octestx.basic.multiplatform.common.utils.link
+import io.github.octestx.basic.multiplatform.common.utils.linkDir
 import io.klogging.noCoLogger
 import kotlinx.io.files.Path
 
@@ -20,17 +20,17 @@ object FileTree {
 
     lateinit var configDir: Path private set
     fun init() {
-        plugins = appDirs.getUserDataDir().asFilePath().linkDir("Plugins")
+        plugins = appDirs.getUserDataDir().asKFilePath().linkDir("Plugins")
         ologger.info { "PluginDir: $plugins" }
 //        pluginsJars = plugins.linkDir("jars")
         pluginsData = plugins.linkDir("data")
 
-        screenDir = appDirs.getUserDataDir().asFilePath().linkDir("Screen")
+        screenDir = appDirs.getUserDataDir().asKFilePath().linkDir("Screen")
         
-        dataDBFile = appDirs.getUserDataDir().asFilePath().link("data.db")
+        dataDBFile = appDirs.getUserDataDir().asKFilePath().link("data.db")
         DataDB.init(dataDBFile)
 
-        configDir = appDirs.getUserDataDir().asFilePath().linkDir("Configs")
+        configDir = appDirs.getUserDataDir().asKFilePath().linkDir("Configs")
         ConfigManager.reload()
     }
     fun pluginData(pluginId: String) = pluginsData.linkDir(pluginId)

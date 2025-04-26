@@ -1,7 +1,7 @@
 package io.github.octestx.krecall.plugins
 
-import io.github.kotlin.fibonacci.utils.OS
-import io.github.kotlin.fibonacci.utils.ojson
+import io.github.octestx.basic.multiplatform.common.utils.OS
+import io.github.octestx.basic.multiplatform.common.utils.ojson
 import io.github.octestx.krecall.plugins.basic.PluginBasic
 import io.github.octestx.krecall.plugins.basic.PluginMetadata
 import io.klogging.noCoLogger

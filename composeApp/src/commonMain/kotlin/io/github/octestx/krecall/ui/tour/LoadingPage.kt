@@ -3,8 +3,8 @@ package io.github.octestx.krecall.ui.tour
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import io.github.octestx.basic.multiplatform.ui.ui.core.AbsUIPage
 import io.klogging.noCoLogger
-import ui.core.AbsUIPage
 
 class LoadingPage(model: LoadingPageModel): AbsUIPage<Any?, LoadingPage.LoadingPageState, LoadingPage.LoadingPageAction>(model) {
     private val ologger = noCoLogger<LoadingPage>()

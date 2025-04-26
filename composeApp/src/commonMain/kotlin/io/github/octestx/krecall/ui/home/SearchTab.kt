@@ -21,16 +21,16 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import compose.icons.TablerIcons
 import compose.icons.tablericons.Send
+import io.github.octestx.basic.multiplatform.ui.ui.core.AbsUIPage
+import io.github.octestx.basic.multiplatform.ui.ui.utils.DelayShowAnimation
+import io.github.octestx.basic.multiplatform.ui.ui.utils.StepLoadAnimation
 import io.github.octestx.krecall.GlobalRecalling
 import io.github.octestx.krecall.model.ImageState
 import io.github.octestx.krecall.plugins.PluginManager
 import io.github.octestx.krecall.repository.DataDB
-import io.github.octestx.krecall.utils.DelayShowAnimation
-import io.github.octestx.krecall.utils.StepLoadAnimation
 import io.klogging.noCoLogger
 import kotlinx.coroutines.*
 import models.sqld.DataItem
-import ui.core.AbsUIPage
 
 class SearchTab(model: SearchPageModel): AbsUIPage<Any?, SearchTab.SearchPageState, SearchTab.SearchPageAction>(model) {
     private val ologger = noCoLogger<SearchTab>()
@@ -45,7 +45,7 @@ class SearchTab(model: SearchPageModel): AbsUIPage<Any?, SearchTab.SearchPageSta
                             derivedStateOf { state.searchResult.isNotEmpty() }
                         }
                         AnimatedVisibility(showResultCount) {
-                            Text("Search result: ${state.searchResult.size}", color = MaterialTheme.colorScheme.primary)
+                            Text("Search result: ${state.searchResult.size}")
                         }
                         SearchBar(step, state)
 
@@ -94,7 +94,7 @@ class SearchTab(model: SearchPageModel): AbsUIPage<Any?, SearchTab.SearchPageSta
                             ElevatedFilterChip(
                                 selected = false,
                                 onClick = { state.action(SearchPageAction.RemoveTag(tag)) },
-                                label = { Text(text = tag, color = MaterialTheme.colorScheme.primary) }
+                                label = { Text(text = tag) }
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                         }
@@ -114,7 +114,7 @@ class SearchTab(model: SearchPageModel): AbsUIPage<Any?, SearchTab.SearchPageSta
 
     @Composable
     private fun SearchBar(step: Int, state: SearchPageState) {
-        Row(Modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth().padding(8.dp)) {
             if (step >= 1) {
                 OutlinedTextField(
                     value = state.searchText,
@@ -196,7 +196,7 @@ class SearchTab(model: SearchPageModel): AbsUIPage<Any?, SearchTab.SearchPageSta
             val displayText by remember(item.data_) {
                 derivedStateOf { item.data_?.take(150) ?: "NULL" }
             }
-            Text(text = displayText, maxLines = 3, color = MaterialTheme.colorScheme.secondary)
+            Text(text = displayText, maxLines = 3)
         }
     }
     sealed class SearchPageAction : AbsUIAction() {

@@ -8,17 +8,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import compose.icons.TablerIcons
 import compose.icons.tablericons.ArrowBack
 import compose.icons.tablericons.Download
+import io.github.octestx.basic.multiplatform.ui.ui.core.AbsUIPage
+import io.github.octestx.basic.multiplatform.ui.utils.highlightText
 import io.github.octestx.krecall.GlobalRecalling
 import io.github.octestx.krecall.model.ImageState
 import io.github.octestx.krecall.plugins.PluginManager
@@ -29,7 +27,6 @@ import io.klogging.noCoLogger
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import models.sqld.DataItem
-import ui.core.AbsUIPage
 
 class TimestampViewPage(model: TimestampViewPageModel): AbsUIPage<TimestampViewPageModelData, TimestampViewPage.TimestampViewPageState, TimestampViewPage.TimestampViewPageAction>(model) {
     private val ologger = noCoLogger<TimestampViewPage>()
@@ -44,7 +41,7 @@ class TimestampViewPage(model: TimestampViewPageModel): AbsUIPage<TimestampViewP
                     IconButton(onClick = {
                         state.action(TimestampViewPageAction.GoBack)
                     }) {
-                        Icon(TablerIcons.ArrowBack, null)
+                        Icon(TablerIcons.ArrowBack, null, tint = MaterialTheme.colorScheme.primary)
                     }
                 })
                 Box(
@@ -58,39 +55,46 @@ class TimestampViewPage(model: TimestampViewPageModel): AbsUIPage<TimestampViewP
 //                    }
                 ) {
                     val scrollState = rememberScrollState()
-                    Column(modifier = Modifier.verticalScroll(scrollState).padding(5.dp).border(border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary), shape = MaterialTheme.shapes.medium).padding(5.dp)) {
-                        when (state.imageState) {
-                            ImageState.Error -> {
-                                Text("ERROR!")
-                            }
-                            ImageState.Loading -> {
-                                CircularProgressIndicator()
-                            }
-                            is ImageState.Success -> {
-                                AsyncImage(state.imageState.bytes, null, contentScale = ContentScale.FillWidth)
-                                Row {
-                                    val launcher = rememberFileSaverLauncher { file ->
-                                        // Write your data to the file
-                                        if (file != null) {
-                                            scope.launch {
-                                                file.write(state.imageState.bytes)
+                    Column(modifier = Modifier.verticalScroll(scrollState)) {
+                        Column(Modifier.padding(5.dp).border(border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary)).padding(5.dp)) {
+                            when (state.imageState) {
+                                ImageState.Error -> {
+                                    Text("ERROR!")
+                                }
+                                ImageState.Loading -> {
+                                    CircularProgressIndicator()
+                                }
+                                is ImageState.Success -> {
+                                    AsyncImage(state.imageState.bytes, null, contentScale = ContentScale.FillWidth)
+                                    Row {
+                                        val launcher = rememberFileSaverLauncher { file ->
+                                            // Write your data to the file
+                                            if (file != null) {
+                                                scope.launch {
+                                                    file.write(state.imageState.bytes)
+                                                }
                                             }
                                         }
-                                    }
-                                    IconButton(onClick = {
-                                        launcher.launch("output-KRecallScreen-${state.dataItem.screenId}_${System.nanoTime()}", "png")
-                                    }) {
-                                        Icon(TablerIcons.Download, null, tint = MaterialTheme.colorScheme.primary)
+                                        IconButton(onClick = {
+                                            launcher.launch("output-KRecallScreen-${state.dataItem.screenId}_${System.nanoTime()}", "png")
+                                        }) {
+                                            Icon(TablerIcons.Download, null, tint = MaterialTheme.colorScheme.primary)
+                                        }
                                     }
                                 }
                             }
                         }
                         if (state.dataItem.status == 0L || state.dataItem.status == 1L) {
                             Text(
-                                text = highlightText(
-                                    text = state.dataItem.data_ ?: "NULL",
-                                    highlights = state.highlights
-                                ),
+                                text = if (state.dataItem.data_ == null) {
+                                    AnnotatedString("NULL")
+                                } else {
+                                    highlightText(
+                                        text = state.dataItem.data_,
+                                        highlightColor = MaterialTheme.colorScheme.primary,
+                                        highlights = state.highlights
+                                    )
+                                },
                                 modifier = Modifier.padding(8.dp).border(border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary), shape = MaterialTheme.shapes.medium).padding(5.dp),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onBackground
@@ -117,67 +121,6 @@ class TimestampViewPage(model: TimestampViewPageModel): AbsUIPage<TimestampViewP
                             .animateContentSize() // 尺寸动画
                     )
                 }
-            }
-        }
-    }
-    private fun highlightText(text: String, highlights: List<String>): AnnotatedString {
-        return buildAnnotatedString {
-            if (highlights.isEmpty()) {
-                append(text)
-                return@buildAnnotatedString
-            }
-
-            // 预处理：收集所有匹配区间（不区分大小写）
-            val ranges = mutableListOf<IntRange>()
-            val lowerText = text.lowercase()
-
-            highlights.forEach { keyword ->
-                val lowerKeyword = keyword.lowercase()
-                var startIndex = 0
-
-                while (startIndex < text.length) {
-                    val index = lowerText.indexOf(lowerKeyword, startIndex)
-                    if (index == -1) break
-
-                    ranges.add(index until (index + keyword.length))
-                    startIndex = index + 1
-                }
-            }
-
-            // 合并重叠/相邻的区间
-            val mergedRanges = ranges.sortedBy { it.first }.fold(mutableListOf<IntRange>()) { acc, range ->
-                if (acc.isEmpty()) {
-                    acc.add(range)
-                } else {
-                    val last = acc.last()
-                    if (range.first <= last.last) {
-                        acc[acc.lastIndex] = last.first..maxOf(last.last, range.last)
-                    } else {
-                        acc.add(range)
-                    }
-                }
-                acc
-            }
-
-            // 构建带高亮的文本
-            var lastPos = 0
-            mergedRanges.forEach { range ->
-                // 添加非高亮部分
-                if (range.first > lastPos) {
-                    append(text.substring(lastPos, range.first))
-                }
-
-                // 添加高亮部分
-                withStyle(SpanStyle(background = Color.Yellow.copy(alpha = 0.4f))) {
-                    append(text.substring(range))
-                }
-
-                lastPos = range.last
-            }
-
-            // 添加剩余部分
-            if (lastPos < text.length) {
-                append(text.substring(lastPos, text.length))
             }
         }
     }

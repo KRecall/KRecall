@@ -1,8 +1,8 @@
 package io.github.octestx.krecall.plugins
 
-import io.github.kotlin.fibonacci.appDirs
-import io.github.kotlin.fibonacci.utils.asFilePath
-import io.github.kotlin.fibonacci.utils.linkDir
+import io.github.octestx.basic.multiplatform.common.appDirs
+import io.github.octestx.basic.multiplatform.common.utils.asKFilePath
+import io.github.octestx.basic.multiplatform.common.utils.linkDir
 import io.github.octestx.krecall.plugins.basic.PluginBasic
 import io.github.octestx.krecall.plugins.basic.PluginMetadata
 import io.github.octestx.krecall.plugins.capturescreen.CaptureScreenByWinPowerShellPlugin
@@ -11,7 +11,7 @@ import io.github.octestx.krecall.plugins.impl.storage.OTStoragePlugin
 import io.github.vinceglb.filekit.utils.toFile
 
 actual suspend fun getPlatformExtPlugins(): Map<PluginMetadata, (metadata: PluginMetadata) -> PluginBasic> {
-    val jarsDir = appDirs.getUserDataDir().asFilePath().linkDir("JarPlugins").toFile()
+    val jarsDir = appDirs.getUserDataDir().asKFilePath().linkDir("JarPlugins").toFile()
     JarPluginManager.loadPluginsFromDir(jarsDir)
     return JarPluginManager.plugins.values.map {
         it.metadata to { metadata: PluginMetadata ->

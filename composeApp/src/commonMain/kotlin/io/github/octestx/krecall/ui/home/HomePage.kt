@@ -13,18 +13,19 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import io.github.kotlin.fibonacci.ui.theme.ThemeRepository
-import io.github.kotlin.fibonacci.ui.toast
+import io.github.octestx.basic.multiplatform.ui.ui.core.AbsUIPage
+import io.github.octestx.basic.multiplatform.ui.ui.theme.ThemeRepository
+import io.github.octestx.basic.multiplatform.ui.ui.toast
+import io.github.octestx.basic.multiplatform.ui.ui.utils.EnhancedDropdownSelector
 import io.github.octestx.krecall.GlobalRecalling
 import io.github.octestx.krecall.composeapp.generated.resources.Res
 import io.github.octestx.krecall.composeapp.generated.resources.developer_avatar
 import io.github.octestx.krecall.repository.ConfigManager
 import io.github.octestx.krecall.ui.TimestampViewPage
-import io.github.octestx.krecall.utils.EnhancedDropdownSelector
 import io.klogging.noCoLogger
 import org.jetbrains.compose.resources.InternalResourceApi
 import org.jetbrains.compose.resources.painterResource
-import ui.core.AbsUIPage
+import kotlin.system.exitProcess
 
 class HomePage(model: HomePageModel): AbsUIPage<Any?, HomePage.HomePageState, HomePage.HomePageAction>(model) {
     private val ologger = noCoLogger<HomePage>()
@@ -76,6 +77,11 @@ class HomePage(model: HomePageModel): AbsUIPage<Any?, HomePage.HomePageState, Ho
                             }
                         }
                     )
+                    Button(onClick = {
+                        exitProcess(0)
+                    }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.onError)) {
+                        Text("终止KRecall进程", color = MaterialTheme.colorScheme.error, fontWeight = MaterialTheme.typography.bodyMedium.fontWeight)
+                    }
                 }
             }
         ) {

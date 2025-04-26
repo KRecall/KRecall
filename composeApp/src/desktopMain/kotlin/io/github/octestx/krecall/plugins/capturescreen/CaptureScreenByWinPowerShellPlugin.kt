@@ -7,7 +7,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
-import io.github.kotlin.fibonacci.utils.OS
+import io.github.octestx.basic.multiplatform.common.utils.OS
 import io.github.octestx.krecall.plugins.basic.AbsCaptureScreenPlugin
 import io.github.octestx.krecall.plugins.basic.PluginMetadata
 import io.github.octestx.krecall.plugins.basic.WindowInfo

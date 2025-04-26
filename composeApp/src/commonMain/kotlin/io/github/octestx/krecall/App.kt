@@ -11,7 +11,8 @@ import coil3.ImageLoader
 import coil3.compose.setSingletonImageLoaderFactory
 import coil3.memory.MemoryCache
 import coil3.request.crossfade
-import io.github.kotlin.fibonacci.ui.BasicMUIWrapper
+import io.github.octestx.basic.multiplatform.ui.ui.BasicMUIWrapper
+import io.github.octestx.basic.multiplatform.ui.ui.core.AbsUIPage
 import io.github.octestx.krecall.plugins.PluginManager
 import io.github.octestx.krecall.repository.ConfigManager
 import io.github.octestx.krecall.ui.TimestampViewPage
@@ -24,7 +25,6 @@ import io.klogging.noCoLogger
 import moe.tlaster.precompose.PreComposeApp
 import moe.tlaster.precompose.navigation.*
 import moe.tlaster.precompose.navigation.transition.NavTransition
-import ui.core.AbsUIPage
 
 class AppMainPage(model: AppMainPageModel): AbsUIPage<Any?, AppMainPage.AppMainPageState, AppMainPage.AppMainPageAction>(model) {
     private val ologger = noCoLogger<AppMainPage>()

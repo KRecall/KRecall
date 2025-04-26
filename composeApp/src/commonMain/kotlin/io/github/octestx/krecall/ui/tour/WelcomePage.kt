@@ -5,8 +5,8 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import io.github.octestx.basic.multiplatform.ui.ui.core.AbsUIPage
 import io.klogging.noCoLogger
-import ui.core.AbsUIPage
 
 class WelcomePage(model: WelcomePageModel): AbsUIPage<Any?, WelcomePage.PluginConfigState, WelcomePage.WelcomePageAction>(model) {
     private val ologger = noCoLogger<WelcomePage>()

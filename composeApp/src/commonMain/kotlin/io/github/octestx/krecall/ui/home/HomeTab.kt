@@ -14,17 +14,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.dp
+import io.github.octestx.basic.multiplatform.ui.ui.core.AbsUIPage
+import io.github.octestx.basic.multiplatform.ui.ui.utils.DelayShowAnimation
+import io.github.octestx.basic.multiplatform.ui.ui.utils.StepLoadAnimation
 import io.github.octestx.krecall.GlobalRecalling
 import io.github.octestx.krecall.plugins.PluginManager
 import io.github.octestx.krecall.repository.ConfigManager
 import io.github.octestx.krecall.repository.DataDB
-import io.github.octestx.krecall.utils.DelayShowAnimation
-import io.github.octestx.krecall.utils.StepLoadAnimation
 import io.klogging.noCoLogger
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.decodeToImageBitmap
-import ui.core.AbsUIPage
 
 class HomeTab(model: HomePageModel): AbsUIPage<Any?, HomeTab.HomePageState, HomeTab.HomePageAction>(model) {
     private val ologger = noCoLogger<HomeTab>()
@@ -57,7 +57,7 @@ class HomeTab(model: HomePageModel): AbsUIPage<Any?, HomeTab.HomePageState, Home
                                         currentIndex = state.selectedTimestampIndex,
                                         theNowMode = state.theNowMode,
                                         changeTheNowMode = { state.action(HomePageAction.ChangeTheNowMode(it))},
-                                        modifier = Modifier.border(border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary), shape = MaterialTheme.shapes.medium).padding(5.dp)
+                                        modifier = Modifier.border(border = BorderStroke(2.dp, MaterialTheme.colorScheme.secondary), shape = MaterialTheme.shapes.medium).padding(5.dp)
                                     ) {
                                         state.action(HomePageAction.ChangeSelectedTimestampIndex(it))
                                     }
@@ -77,9 +77,9 @@ class HomeTab(model: HomePageModel): AbsUIPage<Any?, HomeTab.HomePageState, Home
                             }
                             Spacer(Modifier.height(5.dp))
                             if (step >= 5) {
-                                Column(modifier = Modifier.fillMaxSize().border(border = BorderStroke(2.dp, MaterialTheme.colorScheme.tertiary), shape = MaterialTheme.shapes.medium).padding(5.dp)) {
+                                Column(modifier = Modifier.fillMaxSize().border(border = BorderStroke(2.dp, MaterialTheme.colorScheme.secondary), shape = MaterialTheme.shapes.medium).padding(5.dp)) {
                                     Text("Data:", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                                    Text(state.currentData, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+                                    Text(state.currentData, style = MaterialTheme.typography.bodySmall)
                                 }
                             }
                         }
@@ -111,7 +111,7 @@ class HomeTab(model: HomePageModel): AbsUIPage<Any?, HomeTab.HomePageState, Home
                 }
             }
             val collectingScreen by GlobalRecalling.collectingScreen.collectAsState()
-            Text("获取信息", modifier = Modifier.align(Alignment.CenterVertically), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+            Text("获取信息", modifier = Modifier.align(Alignment.CenterVertically), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.typography.bodyMedium.color)
             Switch(collectingScreen, { state.action(HomePageAction.ChangeCollectingScreen(!collectingScreen)) })
         }
     }
@@ -127,7 +127,7 @@ class HomeTab(model: HomePageModel): AbsUIPage<Any?, HomeTab.HomePageState, Home
                 }
                 Text(processingDataCount.toString(), modifier = Modifier.align(Alignment.Center), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
             }
-            Text("处理数据", modifier = Modifier.align(Alignment.CenterVertically), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+            Text("处理数据", modifier = Modifier.align(Alignment.CenterVertically), style = MaterialTheme.typography.bodySmall)
             Switch(processingData, { state.action(HomePageAction.ChangeProcessingData(!processingData)) })
         }
     }

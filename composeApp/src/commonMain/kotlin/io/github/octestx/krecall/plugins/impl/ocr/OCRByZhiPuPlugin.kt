@@ -11,8 +11,8 @@ import com.aallam.openai.api.exception.OpenAIErrorDetails
 import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.OpenAI
 import com.aallam.openai.client.OpenAIHost
-import io.github.kotlin.fibonacci.utils.OS
-import io.github.kotlin.fibonacci.utils.ojson
+import io.github.octestx.basic.multiplatform.common.utils.OS
+import io.github.octestx.basic.multiplatform.common.utils.ojson
 import io.github.octestx.krecall.exceptions.ConfigurationNotSavedException
 import io.github.octestx.krecall.plugins.basic.*
 import io.github.octestx.krecall.plugins.impl.storage.OTStoragePlugin

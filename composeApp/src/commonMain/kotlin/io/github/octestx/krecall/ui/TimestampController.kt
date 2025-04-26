@@ -14,7 +14,7 @@ import compose.icons.TablerIcons
 import compose.icons.tablericons.ArrowLeft
 import compose.icons.tablericons.ArrowRight
 import compose.icons.tablericons.Run
-import io.github.kotlin.fibonacci.utils.TimeStamp
+import io.github.octestx.basic.multiplatform.common.utils.TimeStamp
 import kotlinx.coroutines.delay
 import kotlin.math.abs
 

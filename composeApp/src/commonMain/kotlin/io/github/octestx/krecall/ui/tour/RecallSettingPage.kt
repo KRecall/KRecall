@@ -9,9 +9,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import io.github.octestx.basic.multiplatform.ui.ui.core.AbsUIPage
 import io.github.octestx.krecall.repository.ConfigManager
 import io.klogging.noCoLogger
-import ui.core.AbsUIPage
 import kotlin.math.roundToInt
 
 class RecallSettingPage(model: RecallSettingPageModel): AbsUIPage<Any?, RecallSettingPage.PluginConfigState, RecallSettingPage.RecallSettingPageAction>(model) {

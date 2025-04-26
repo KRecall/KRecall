@@ -2,7 +2,7 @@ package io.github.octestx.krecall.plugins
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import io.github.kotlin.fibonacci.utils.OS
+import io.github.octestx.basic.multiplatform.common.utils.OS
 import io.github.octestx.krecall.plugins.basic.*
 import io.github.octestx.krecall.plugins.impl.PluginContextImpl
 import io.github.octestx.krecall.repository.ConfigManager
@@ -25,6 +25,8 @@ object PluginManager {
     val storagePlugin: StateFlow<Result<AbsStoragePlugin>> get() = _storagePlugin
     private val _ocrPlugin: MutableStateFlow<Result<AbsOCRPlugin>> = MutableStateFlow(Result.failure(Exception("Plugin not loaded")))
     val ocrPlugin: StateFlow<Result<AbsOCRPlugin>> get() = _ocrPlugin
+
+    private val _storageFilterPlugins: MutableMap<PluginMetadata, AbsScreenStorageFilterPlugin> = mutableMapOf()
 
     private val _needJumpConfigUI: MutableStateFlow<Boolean> = MutableStateFlow(false)
 
@@ -51,6 +53,8 @@ object PluginManager {
                 is AbsCaptureScreenPlugin -> _availableCaptureScreenPlugins[metadata] = plugin
                 is AbsStoragePlugin -> _availableStoragePlugins[metadata] = plugin
                 is AbsOCRPlugin -> _availableOCRPlugins[metadata] = plugin
+                is AbsScreenStorageFilterPlugin -> _storageFilterPlugins[metadata] = plugin
+                //TODO add new plugin type
                 else -> _allOtherPlugin[metadata] = plugin
             }
         }
@@ -81,11 +85,11 @@ object PluginManager {
         }
         val storagePlugin = kotlin.runCatching {
             val metadata = if (config.storagePluginId == null) availableStoragePlugins.keys.firstOrNull() else availableStoragePlugins.keys.firstOrNull { it.pluginId == config.storagePluginId }
-            (allPlugin[metadata]!! as AbsStoragePlugin).apply { selected() }
+            availableStoragePlugins[metadata]!!.apply { selected() }
         }
         val ocrPlugin = kotlin.runCatching {
             val metadata = if (config.ocrPluginId == null) availableOCRPlugins.keys.firstOrNull() else availableOCRPlugins.keys.firstOrNull { it.pluginId == config.ocrPluginId }
-            (allPlugin[metadata]!! as AbsOCRPlugin).apply { selected() }
+            availableOCRPlugins[metadata]!!.apply { selected() }
         }
         if (captureScreenPlugin.isFailure || storagePlugin.isFailure || ocrPlugin.isFailure) {
             val errorMessage = """

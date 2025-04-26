@@ -1,10 +1,10 @@
 package io.github.octestx.krecall
 
 import androidx.compose.ui.window.TrayState
-import io.github.kotlin.fibonacci.BasicMultiplatformConfigModule
-import io.github.kotlin.fibonacci.JVMInitCenter
-import io.github.kotlin.fibonacci.JVMUIInitCenter
-import io.github.kotlin.fibonacci.utils.checkSelfIsSingleInstance
+import io.github.octestx.basic.multiplatform.common.BasicMultiplatformConfigModule
+import io.github.octestx.basic.multiplatform.common.JVMInitCenter
+import io.github.octestx.basic.multiplatform.common.utils.checkSelfIsSingleInstance
+import io.github.octestx.basic.multiplatform.ui.JVMUIInitCenter
 import io.github.octestx.krecall.plugins.PluginManager
 import io.github.octestx.krecall.plugins.basic.PluginBasic
 import io.github.octestx.krecall.plugins.basic.PluginEnvironment

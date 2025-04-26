@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import io.github.octestx.basic.multiplatform.ui.ui.core.AbsUIPage
 import io.github.octestx.krecall.GlobalRecalling
 import io.github.octestx.krecall.model.ImageState
 import io.github.octestx.krecall.plugins.PluginManager
@@ -33,7 +34,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import models.sqld.DataItem
-import ui.core.AbsUIPage
 
 class ViewProcessFailsTab(model: ViewProcessFailsPageModel): AbsUIPage<Any?, ViewProcessFailsTab.ViewProcessFailsPageState, ViewProcessFailsTab.ViewProcessFailsPageAction>(model) {
     private val ologger = noCoLogger<ViewProcessFailsTab>()

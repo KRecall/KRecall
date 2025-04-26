@@ -17,24 +17,12 @@ object OTStorageDB {
         driver = JdbcSqliteDriver("jdbc:sqlite:${dbFile.toString().apply {
             ologger.info("Initializing OTStorageDB: $this")
         }}")
-        //TODO 手动建表
-        driver.execute(null, """
-            CREATE TABLE IF NOT EXISTS OTStorageDBItem (
-                timestamp INTEGER NOT NULL PRIMARY KEY,
-                fileTimestamp INTEGER NOT NULL,
-                mark TEXT DEFAULT NULL
-            );
-        """.trimIndent(), 0)
-
         // 表结构已在 .sq 文件定义，此处无需重复创建
         otStorageDBQueries = OTStorageDBQueries(driver)
+        otStorageDBQueries.createTable()
     }
 
     // region CRUD 操作
-    fun listAllData(): List<OTStorageDBItem> {
-        return otStorageDBQueries.listAllData().executeAsList()
-    }
-
     fun listDataWithTimestampRange(start: Long, end: Long): List<OTStorageDBItem> {
         return otStorageDBQueries.listDataWithTimestampRange(start, end).executeAsList()
     }
