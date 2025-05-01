@@ -14,7 +14,7 @@ plugins {
 }
 
 group = "io.github.octestx.krecall"
-version = "0.2.1.1"
+version = "0.0.1"
 
 kotlin {
     androidTarget {
