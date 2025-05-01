@@ -24,7 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
+import com.github.panpf.zoomimage.CoilZoomAsyncImage
 import io.github.octestx.basic.multiplatform.ui.ui.core.AbsUIPage
 import io.github.octestx.basic.multiplatform.ui.ui.toast
 import io.github.octestx.basic.multiplatform.ui.ui.utils.ToastModel
@@ -72,7 +72,7 @@ class ViewProcessFailsTab(model: ViewProcessFailsPageModel): AbsUIPage<Any?, Vie
                                         CircularProgressIndicator()
                                     }
                                     is ImageState.Success -> {
-                                        AsyncImage(imgState.bytes, null, contentScale = ContentScale.FillWidth)
+                                        CoilZoomAsyncImage(imgState.bytes, null, contentScale = ContentScale.FillWidth)
                                     }
                                 }
                             }

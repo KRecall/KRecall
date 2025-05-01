@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.dp
+import com.github.panpf.zoomimage.ZoomImage
 import io.github.octestx.basic.multiplatform.ui.ui.core.AbsUIPage
 import io.github.octestx.basic.multiplatform.ui.ui.utils.DelayShowAnimation
 import io.github.octestx.basic.multiplatform.ui.ui.utils.StepLoadAnimation
@@ -68,10 +69,10 @@ class HomeTab(model: HomePageModel): AbsUIPage<Any?, HomeTab.HomePageState, Home
                                 Spacer(Modifier.height(5.dp))
                                 if (step >= 4) {
                                     DelayShowAnimation {
-                                        Image(
+                                        ZoomImage(
                                             painter = this,
                                             contentDescription = "Screen",
-                                            modifier = Modifier.border(border = BorderStroke(2.dp, MaterialTheme.colorScheme.secondary)).padding(5.dp)
+                                            modifier = Modifier.border(border = BorderStroke(2.dp, MaterialTheme.colorScheme.secondary)).padding(5.dp).fillMaxWidth().aspectRatio(state.aspectRatio)
                                         )
                                     }
                                 }
@@ -146,6 +147,7 @@ class HomeTab(model: HomePageModel): AbsUIPage<Any?, HomeTab.HomePageState, Home
         val scrollState: ScrollState,
         val selectedTimestampIndex: Int,
         val currentImagePainter: Painter?,
+        val aspectRatio: Float,
         val currentData: String,
         val action: (HomePageAction) -> Unit
     ): AbsUIState<HomePageAction>()
@@ -153,11 +155,12 @@ class HomeTab(model: HomePageModel): AbsUIPage<Any?, HomeTab.HomePageState, Home
     class HomePageModel: AbsUIModel<Any?, HomePageState, HomePageAction>() {
         val ologger = noCoLogger<HomePageModel>()
 
-        private var _theNowMode by mutableStateOf(true)
-        private val _scrollState = ScrollState(0)
-        private var _selectedTimestampIndex by mutableStateOf(GlobalRecalling.allTimestamp.lastIndex)
-        private var _currentImagePainter: Painter? by mutableStateOf(null)
-        private var _currentData by mutableStateOf("")
+        private var theNowMode by mutableStateOf(true)
+        private val scrollState = ScrollState(0)
+        private var selectedTimestampIndex by mutableStateOf(GlobalRecalling.allTimestamp.lastIndex)
+        private var currentImagePainter: Painter? by mutableStateOf(null)
+        private var currentImageAspectRatio by mutableStateOf(1f)
+        private var currentData by mutableStateOf("")
 
         init {
             GlobalRecalling.init()
@@ -167,26 +170,32 @@ class HomeTab(model: HomePageModel): AbsUIPage<Any?, HomeTab.HomePageState, Home
         @Composable
         override fun CreateState(params: Any?): HomePageState {
             TraceRealtime()
-            return HomePageState(_theNowMode, _scrollState, _selectedTimestampIndex, _currentImagePainter, _currentData) {
+            return HomePageState(theNowMode, scrollState, selectedTimestampIndex, currentImagePainter, currentImageAspectRatio, currentData) {
                 actionExecute(params, it)
             }
         }
         @OptIn(ExperimentalResourceApi::class)
         @Composable
         private fun TraceRealtime() {
-            LaunchedEffect(_selectedTimestampIndex) {
-                while (_selectedTimestampIndex < 0) {
-                    _selectedTimestampIndex = GlobalRecalling.allTimestamp.lastIndex
+            var preTimestampIndex = -1
+            LaunchedEffect(selectedTimestampIndex) {
+                while (selectedTimestampIndex < 0) {
+                    val leastTimestampIndex = GlobalRecalling.allTimestamp.lastIndex
+                    if (preTimestampIndex != leastTimestampIndex) {
+                        selectedTimestampIndex = leastTimestampIndex
+                        preTimestampIndex = leastTimestampIndex
+                    }
                     delay(350)
                 }
                 //Realtime update current data
-                while (_currentData.isEmpty()) {
+                while (currentData.isEmpty()) {
                     PluginManager.getStoragePlugin().onSuccess { storagePlugin ->
-                        _currentData = DataDB.getData(GlobalRecalling.allTimestamp[_selectedTimestampIndex])?.data_ ?: ""
-                        storagePlugin.getScreenData(GlobalRecalling.allTimestamp[_selectedTimestampIndex])
+                        currentData = DataDB.getData(GlobalRecalling.allTimestamp[selectedTimestampIndex])?.data_ ?: ""
+                        storagePlugin.getScreenData(GlobalRecalling.allTimestamp[selectedTimestampIndex])
                             .onSuccess {
                                 val img = it.decodeToImageBitmap()
-                                _currentImagePainter = BitmapPainter(img)
+                                currentImageAspectRatio = (img.width.toDouble() / img.height.toDouble()).toFloat()
+                                currentImagePainter = BitmapPainter(img)
                             }
                     }
                     delay(1000)
@@ -194,24 +203,24 @@ class HomeTab(model: HomePageModel): AbsUIPage<Any?, HomeTab.HomePageState, Home
             }
 
 
-            if (_selectedTimestampIndex >= 0) {
+            if (selectedTimestampIndex >= 0) {
                 //Realtime update current data
-                LaunchedEffect(_selectedTimestampIndex) {
-                    while (_currentData.isEmpty()) {
+                LaunchedEffect(selectedTimestampIndex) {
+                    while (currentData.isEmpty()) {
                         PluginManager.getStoragePlugin().onSuccess { storagePlugin ->
-                            _currentData = DataDB.getData(GlobalRecalling.allTimestamp[_selectedTimestampIndex])?.data_ ?: ""
-                            storagePlugin.getScreenData(GlobalRecalling.allTimestamp[_selectedTimestampIndex])
+                            currentData = DataDB.getData(GlobalRecalling.allTimestamp[selectedTimestampIndex])?.data_ ?: ""
+                            storagePlugin.getScreenData(GlobalRecalling.allTimestamp[selectedTimestampIndex])
                                 .onSuccess {
                                     val img = it.decodeToImageBitmap()
-                                    _currentImagePainter = BitmapPainter(img)
+                                    currentImagePainter = BitmapPainter(img)
                                 }
                         }
                         delay(1000)
                     }
                 }
             } else {
-                _selectedTimestampIndex = GlobalRecalling.allTimestamp.lastIndex
-                if (_selectedTimestampIndex >= 0) {
+                selectedTimestampIndex = GlobalRecalling.allTimestamp.lastIndex
+                if (selectedTimestampIndex >= 0) {
                     TraceRealtime()
                 }
             }
@@ -220,11 +229,11 @@ class HomeTab(model: HomePageModel): AbsUIPage<Any?, HomeTab.HomePageState, Home
             when(action) {
                 is HomePageAction.ChangeCollectingScreen -> GlobalRecalling.collectingScreen.value = action.collectingScreen
                 is HomePageAction.ChangeProcessingData -> GlobalRecalling.processingData.value = action.processingData
-                is HomePageAction.ChangeTheNowMode -> _theNowMode = action.theNowMode
+                is HomePageAction.ChangeTheNowMode -> theNowMode = action.theNowMode
                 is HomePageAction.ChangeSelectedTimestampIndex -> {
-                    if (_selectedTimestampIndex != action.selectedTimestampIndex) {
-                        _selectedTimestampIndex = action.selectedTimestampIndex
-                        _currentData = ""
+                    if (selectedTimestampIndex != action.selectedTimestampIndex) {
+                        selectedTimestampIndex = action.selectedTimestampIndex
+                        currentData = ""
                     }
                 }
             }

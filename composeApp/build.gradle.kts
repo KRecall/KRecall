@@ -14,7 +14,7 @@ plugins {
 }
 
 group = "io.github.octestx.krecall"
-version = "0.1"
+version = "0.2.1"
 
 kotlin {
     androidTarget {
@@ -79,6 +79,16 @@ kotlin {
 
             implementation("io.arrow-kt:arrow-core:2.1.0")
             implementation("io.arrow-kt:arrow-fx-coroutines:2.1.0")
+
+            // 提供适配了 Coil v3+ 图片加载器的 CoilZoomAsyncImage 组件
+            implementation("io.github.panpf.zoomimage:zoomimage-compose-coil3:1.2.0")
+
+// 提供基础的 ZoomImage 组件，还需要做额外的工作以支持子采样，不支持网络图片
+            implementation("io.github.panpf.zoomimage:zoomimage-compose:1.2.0")
+
+// 支持从 composeResources 文件夹下加载图片
+            implementation("io.github.panpf.zoomimage:zoomimage-compose-resources:1.2.0")
+
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)

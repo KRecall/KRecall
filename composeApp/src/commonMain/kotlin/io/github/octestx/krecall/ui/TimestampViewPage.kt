@@ -11,7 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
+import com.github.panpf.zoomimage.CoilZoomAsyncImage
 import compose.icons.TablerIcons
 import compose.icons.tablericons.ArrowBack
 import compose.icons.tablericons.Download
@@ -69,7 +69,8 @@ class TimestampViewPage(model: TimestampViewPageModel): AbsUIPage<TimestampViewP
                                     CircularProgressIndicator()
                                 }
                                 is ImageState.Success -> {
-                                    AsyncImage(state.imageState.bytes, null, contentScale = ContentScale.FillWidth)
+                                    //TODO fix aspectRatio 1f
+                                    CoilZoomAsyncImage(state.imageState.bytes, null, contentScale = ContentScale.FillWidth, modifier = Modifier.fillMaxWidth().aspectRatio(1f))
                                     Row {
                                         val launcher = rememberFileSaverLauncher { file ->
                                             // Write your data to the file
