@@ -29,8 +29,10 @@ jobs:
         env:
           OAUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          command: make site
-          signing_key: ${{ secrets.SIGNING_KEY }}
+          command: |
+            windows-zip
+            linux-tarball
+            -Kapp.machines=mac.aarch64 make unnotarized-mac-zip
           agree_to_license: 1
 
       - name: Upload Package to Release
