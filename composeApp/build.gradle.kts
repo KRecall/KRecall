@@ -76,6 +76,9 @@ kotlin {
             implementation(libs.compottie.dot)
 
             implementation(libs.conveyor.control)
+
+            implementation("io.arrow-kt:arrow-core:2.1.0")
+            implementation("io.arrow-kt:arrow-fx-coroutines:2.1.0")
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)

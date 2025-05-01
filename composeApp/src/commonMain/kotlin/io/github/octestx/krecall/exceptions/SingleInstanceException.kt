@@ -6,4 +6,4 @@ package io.github.octestx.krecall.exceptions
  * should display user alert via sendExceptionToast
  * and log this exception through io.klogging library.
  */
-class ConfigurationNotSavedException: Exception("Configuration not saved")
+class SingleInstanceException: Exception("Configuration not saved")

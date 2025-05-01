@@ -34,5 +34,4 @@ object FileTree {
         ConfigManager.reload()
     }
     fun pluginData(pluginId: String) = pluginsData.linkDir(pluginId)
-    fun pluginScreenDir(pluginId: String) = screenDir.linkDir(pluginId)
 }

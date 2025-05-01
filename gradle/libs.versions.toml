@@ -29,8 +29,8 @@ sqliteDriver = "2.0.2"
 uiTextAndroid = "1.7.8"
 
 basicMultiplatformLib = "0.1.0"
-basicMultiplatformUiLib = "0.1.3"
-kRecallBasicPluginLibrary = "1.4.3"
+basicMultiplatformUiLib = "0.1.4"
+kRecallBasicPluginLibrary = "1.4.6"
 
 [libraries]
 basic-multiplatform-lib = { module = "io.github.octestx:basic-multiplatform-lib", version.ref = "basicMultiplatformLib" }

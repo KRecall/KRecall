@@ -15,6 +15,7 @@ import io.github.octestx.basic.multiplatform.ui.ui.utils.StepLoadAnimation
 import io.github.octestx.basic.multiplatform.ui.ui.utils.ToastModel
 import io.github.octestx.krecall.exceptions.ConfigurationNotSavedException
 import io.github.octestx.krecall.plugins.basic.AbsStoragePlugin
+import io.github.octestx.krecall.plugins.basic.PluginAbilityInterfaces
 import io.github.octestx.krecall.plugins.basic.PluginContext
 import io.github.octestx.krecall.plugins.basic.PluginMetadata
 import io.klogging.noCoLogger
@@ -31,7 +32,7 @@ import java.io.OutputStream
 import java.nio.file.Files
 import java.nio.file.Paths
 
-class OTStoragePlugin(metadata: PluginMetadata): AbsStoragePlugin(metadata) {
+class OTStoragePlugin(metadata: PluginMetadata): AbsStoragePlugin(metadata), PluginAbilityInterfaces.DrawerUI, PluginAbilityInterfaces.MainTabUI {
     private lateinit var imagePHash: ImagePHash
     companion object {
         val metadata = PluginMetadata(
@@ -233,52 +234,58 @@ class OTStoragePlugin(metadata: PluginMetadata): AbsStoragePlugin(metadata) {
 
         actuallyStorageScreenCount = getScreenDir().listFileNotDir().size
 
-        context.ability.setDrawerUI {
-            Card(Modifier.padding(8.dp)) {
-                val space = getStorageSpaceInfo()
-                Text("存储空间：${space.progress * 100}%", modifier = Modifier.padding(8.dp))
-                HorizontalDivider()
-                LinearProgressIndicator(
-                    progress = { space.progress },
-                    modifier = Modifier.padding(8.dp).fillMaxWidth(),
-                )
-            }
+        ologger.info { "Initialized" }
+        _initialized.value = true
+        return InitResult.Success
+    }
+
+    @Composable
+    override fun DrawerUIShader() {
+        Card(Modifier.padding(8.dp)) {
+            val space = getStorageSpaceInfo()
+            Text("存储空间：${space.progress * 100}%", modifier = Modifier.padding(8.dp))
+            HorizontalDivider()
+            LinearProgressIndicator(
+                progress = { space.progress },
+                modifier = Modifier.padding(8.dp).fillMaxWidth(),
+            )
         }
-        context.ability.addMainTab("OTStorage") {
-            StepLoadAnimation(6) { step ->
-                Column {
-                    AnimatedVisibility(step >= 1) {
-                        Text("OTStorage", modifier = Modifier.padding(8.dp), style = MaterialTheme.typography.titleLarge)
-                    }
-                    AnimatedVisibility(step >= 2) {
-                        Card(Modifier.padding(8.dp)) {
-                            val space = getStorageSpaceInfo()
-                            Text("存储空间：${space.progress * 100}%", modifier = Modifier.padding(8.dp))
-                            AnimatedVisibility(step >= 3) {
-                                Text("${storage(space.usedSpace)} / ${storage(space.totalSpace)}")
-                            }
-                            AnimatedVisibility(step >= 4) {
-                                HorizontalDivider()
-                            }
-                            AnimatedVisibility(step >= 5) {
-                                LinearProgressIndicator(
-                                    progress = { space.progress },
-                                    modifier = Modifier.padding(8.dp).fillMaxWidth(),
-                                )
-                            }
-                            AnimatedVisibility(step >= 6) {
-                                Text("实际存储截屏数量: $actuallyStorageScreenCount", modifier = Modifier.padding(8.dp))
-                            }
+    }
+
+    override val mainTabName: String = "OTStorage"
+
+    @Composable
+    override fun MainTabUIShader() {
+        StepLoadAnimation(6) { step ->
+            Column {
+                AnimatedVisibility(step >= 1) {
+                    Text("OTStorage", modifier = Modifier.padding(8.dp), style = MaterialTheme.typography.titleLarge)
+                }
+                AnimatedVisibility(step >= 2) {
+                    Card(Modifier.padding(8.dp)) {
+                        val space = getStorageSpaceInfo()
+                        Text("存储空间：${space.progress * 100}%", modifier = Modifier.padding(8.dp))
+                        AnimatedVisibility(step >= 3) {
+                            Text("${storage(space.usedSpace)} / ${storage(space.totalSpace)}")
+                        }
+                        AnimatedVisibility(step >= 4) {
+                            HorizontalDivider()
+                        }
+                        AnimatedVisibility(step >= 5) {
+                            LinearProgressIndicator(
+                                progress = { space.progress },
+                                modifier = Modifier.padding(8.dp).fillMaxWidth(),
+                            )
+                        }
+                        AnimatedVisibility(step >= 6) {
+                            Text("实际存储截屏数量: $actuallyStorageScreenCount", modifier = Modifier.padding(8.dp))
                         }
                     }
                 }
             }
         }
-
-        ologger.info { "Initialized" }
-        _initialized.value = true
-        return InitResult.Success
     }
+
 
     private val _initialized = MutableStateFlow(false)
     override val initialized: StateFlow<Boolean> = _initialized

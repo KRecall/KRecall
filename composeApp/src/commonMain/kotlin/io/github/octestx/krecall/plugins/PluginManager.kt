@@ -3,6 +3,7 @@ package io.github.octestx.krecall.plugins
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import io.github.octestx.basic.multiplatform.common.utils.OS
+import io.github.octestx.krecall.exceptions.InvalidKeyPluginException
 import io.github.octestx.krecall.plugins.basic.*
 import io.github.octestx.krecall.plugins.impl.PluginContextImpl
 import io.github.octestx.krecall.repository.ConfigManager
@@ -30,6 +31,7 @@ object PluginManager {
 
     val needJumpConfigUI: StateFlow<Boolean> get() = _needJumpConfigUI
 
+    @Throws(InvalidKeyPluginException::class)
     suspend fun init() {
         ologger.info { "InitPluginManager" }
         loadPlugins()
@@ -37,6 +39,7 @@ object PluginManager {
         saveConfig()
     }
 
+    @Throws(InvalidKeyPluginException::class)
     private suspend fun loadPlugins() {
         val preparePlugins = mutableMapOf<PluginMetadata, (metadata: PluginMetadata) -> PluginBasic>()
         preparePlugins.putAll(getPlatformExtPlugins())
@@ -47,6 +50,7 @@ object PluginManager {
             val plugin = pluginCreator(metadata)
             plugins[metadata] = plugin
             plugin.load()
+            PluginAbilityManager.registerPlugin(plugin)
             when(plugin) {
                 is AbsCaptureScreenPlugin -> _availableCaptureScreenPlugins[metadata] = plugin
                 is AbsStoragePlugin -> _availableStoragePlugins[metadata] = plugin
@@ -59,6 +63,7 @@ object PluginManager {
         ologger.info { "LoadPlugins" }
         checkKeyPlugin()
     }
+    @Throws(InvalidKeyPluginException::class)
     private fun checkKeyPlugin() {
         if (availableCaptureScreenPlugins.isEmpty() || availableStoragePlugins.isEmpty() || availableOCRPlugins.isEmpty()) {
             val errorMessage = """
@@ -70,7 +75,7 @@ object PluginManager {
             ologger.error {
                 errorMessage
             }
-            throw ClassNotFoundException(errorMessage)
+            throw InvalidKeyPluginException(errorMessage)
         }
     }
 

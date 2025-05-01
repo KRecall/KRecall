@@ -4,23 +4,26 @@ import java.awt.color.ColorSpace
 import java.awt.image.BufferedImage
 import java.awt.image.ColorConvertOp
 import java.io.ByteArrayInputStream
-import java.io.File
-import java.io.FileInputStream
 import java.io.InputStream
 import java.net.URL
 import javax.imageio.ImageIO
 import kotlin.math.cos
 import kotlin.math.sqrt
 
-
-class ImagePHash(val size: Int = 32, val smallerSize: Int = 8) {
-    private var c: DoubleArray = DoubleArray(size)
+/**
+ * Perceptual hash (pHash) calculation for images, used to compare image similarity.
+ *
+ * @param size Hash dimension (default: 32), determines hash granularity
+ * @param smallerSize Reduced dimension for DCT (default: 8), affects sensitivity
+ */
+class ImagePHash(val size: Int = 32, private val smallerSize: Int = 8) {
+    private var hashArray: DoubleArray = DoubleArray(size)
 
     init {
         for (i in 1..<size) {
-            c[i] = 1.0
+            hashArray[i] = 1.0
         }
-        c[0] = 1 / sqrt(2.0)
+        hashArray[0] = 1 / sqrt(2.0)
     }
 
 
@@ -41,17 +44,17 @@ class ImagePHash(val size: Int = 32, val smallerSize: Int = 8) {
         var img = ImageIO.read(`is`)
 
         /*
-		 * 1. Reduce size. Like Average Hash, pHash starts with a small image.
-		 * However, the image is larger than 8x8; 32x32 is a good size. This is
-		 * really done to simplify the DCT computation and not because it is
-		 * needed to reduce the high frequencies.
-		 */
+        * 1. Reduce size. Like Average Hash, pHash starts with a small image.
+        * However, the image is larger than 8x8; 32x32 is a good size. This is
+        * really done to simplify the DCT computation and not because it is
+        * needed to reduce the high frequencies.
+        */
         img = resize(img, size, size)
 
         /*
-		 * 2. Reduce color. The image is reduced to a grayscale just to further
-		 * simplify the number of computations.
-		 */
+        * 2. Reduce color. The image is reduced to a grayscale just to further
+        * simplify the number of computations.
+        */
         img = grayscale(img)
 
         val vals = Array(size) { DoubleArray(size) }
@@ -63,23 +66,23 @@ class ImagePHash(val size: Int = 32, val smallerSize: Int = 8) {
         }
 
         /*
-		 * 3. Compute the DCT. The DCT separates the image into a collection of
-		 * frequencies and scalars. While JPEG uses an 8x8 DCT, this algorithm
-		 * uses a 32x32 DCT.
-		 */
+        * 3. Compute the DCT. The DCT separates the image into a collection of
+        * frequencies and scalars. While JPEG uses an 8x8 DCT, this algorithm
+        * uses a 32x32 DCT.
+        */
         val dctVals = applyDCT(vals)
 
         /*
-		 * 4. Reduce the DCT. This is the magic step. While the DCT is 32x32,
-		 * just keep the top-left 8x8. Those represent the lowest frequencies in
-		 * the picture.
-		 */
+        * 4. Reduce the DCT. This is the magic step. While the DCT is 32x32,
+        * just keep the top-left 8x8. Those represent the lowest frequencies in
+        * the picture.
+        */
         /*
-		 * 5. Compute the average value. Like the Average Hash, compute the mean
-		 * DCT value (using only the 8x8 DCT low-frequency values and excluding
-		 * the first term since the DC coefficient can be significantly
-		 * different from the other values and will throw off the average).
-		 */
+        * 5. Compute the average value. Like the Average Hash, compute the mean
+        * DCT value (using only the 8x8 DCT low-frequency values and excluding
+        * the first term since the DC coefficient can be significantly
+        * different from the other values and will throw off the average).
+        */
         var total = 0.0
 
         for (x in 0..<smallerSize) {
@@ -92,14 +95,14 @@ class ImagePHash(val size: Int = 32, val smallerSize: Int = 8) {
         val avg = total / ((smallerSize * smallerSize) - 1).toDouble()
 
         /*
-		 * 6. Further reduce the DCT. This is the magic step. Set the 64 hash
-		 * bits to 0 or 1 depending on whether each of the 64 DCT values is
-		 * above or below the average value. The result doesn't tell us the
-		 * actual low frequencies; it just tells us the very-rough relative
-		 * scale of the frequencies to the mean. The result will not vary as
-		 * long as the overall structure of the image remains the same; this can
-		 * survive gamma and color histogram adjustments without a problem.
-		 */
+        * 6. Further reduce the DCT. This is the magic step. Set the 64 hash
+        * bits to 0 or 1 depending on whether each of the 64 DCT values is
+        * above or below the average value. The result doesn't tell us the
+        * actual low frequencies; it just tells us the very-rough relative
+        * scale of the frequencies to the mean. The result will not vary as
+        * long as the overall structure of the image remains the same; this can
+        * survive gamma and color histogram adjustments without a problem.
+        */
         var hash = ""
 
         for (x in 0..<smallerSize) {
@@ -146,7 +149,7 @@ class ImagePHash(val size: Int = 32, val smallerSize: Int = 8) {
                         sum += (cos(((2 * i + 1) / (2.0 * N)) * u * Math.PI) * cos(((2 * j + 1) / (2.0 * N)) * v * Math.PI) * (f[i][j]))
                     }
                 }
-                sum *= ((c[u] * c[v]) / 4.0)
+                sum *= ((hashArray[u] * hashArray[v]) / 4.0)
                 F[u][v] = sum
             }
         }
@@ -165,19 +168,6 @@ class ImagePHash(val size: Int = 32, val smallerSize: Int = 8) {
         val imgStr = this.getHash(srcUrl.openStream())
         val canStr = this.getHash(canUrl.openStream())
         return this.distance(imgStr, canStr)
-    }
-
-    /**
-     * @param srcFile
-     * @param canFile
-     * @return 值越小相识度越高，10之内可以简单判断这两张图片内容一致
-     * @throws Exception
-     */
-    @Throws(Exception::class)
-    fun distance(srcFile: File?, canFile: File?): Int {
-        val imageSrcFile = this.getHash(FileInputStream(srcFile))
-        val imageCanFile = this.getHash(FileInputStream(canFile))
-        return this.distance(imageSrcFile, imageCanFile)
     }
 
     /**

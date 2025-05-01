@@ -21,7 +21,7 @@ object GlobalRecalling {
     val collectingScreen = MutableStateFlow(true)
     val collectingDelay = MutableStateFlow(0L)
     val processingData = MutableStateFlow(true)
-    val errorTimestamp = mutableStateMapOf<Long, Exception>()
+    private val errorTimestamp = mutableStateMapOf<Long, Exception>()
     val errorTimestampCount = MutableStateFlow(0)
 
     //Timestamp

@@ -1,10 +1,14 @@
 package io.github.octestx.krecall.plugins.impl.ocr
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.aallam.openai.api.chat.*
 import com.aallam.openai.api.exception.InvalidRequestException
 import com.aallam.openai.api.exception.OpenAIErrorDetails
@@ -26,7 +30,7 @@ import kotlinx.serialization.Serializable
 import java.io.File
 
 
-class OCRByZhiPuPlugin(metadata: PluginMetadata): AbsOCRPlugin(metadata) {
+class OCRByZhiPuPlugin(metadata: PluginMetadata): AbsOCRPlugin(metadata), PluginAbilityInterfaces.SettingTabUI {
     companion object {
         val metadata = PluginMetadata(
             pluginId = "OCRByZhiPuPlugin",
@@ -42,53 +46,26 @@ class OCRByZhiPuPlugin(metadata: PluginMetadata): AbsOCRPlugin(metadata) {
 
     @Serializable
     data class ScreenLanguageConverterByZhiPuPluginConfig(
+        val baseUrl: String,
         val apiKey: String,
         val model: String,
         val systemMsg: String,
         val temperature: Double,
         val topP: Double,
         val frequencyPenalty: Double,
-        val backupOCRAPI: String,
     )
-//    private val defaultSystemMsg = """
-//        你是Win11的Recall功能的新后端，我会给你提供一系列电脑截图,请将截图中的内容分析出来，不要使用自然语言，请分成许多个短小的词语,并且进行合理断词,回答要全面，不能使用‘等’，例如分析文件管理器窗口时把里面包含的所有文件的文件名列出来,使用换行分割不同的词语,开头末尾不要引号,类似这样:Clash Verge
-//        OTStoragePlugin
-//        微信
-//        文件夹
-//        文件资源管理器
-//        所有图片
-//        gsd.png
-//        slk the first.png
-//        code.kt
-//你是OCR后端，请将你看到的内容输出成文本,禁止重复说一个词
-//    """.trimIndent()
+
+    /**
+     * @see
+     */
+    private val defaultBaseUrl = "https://open.bigmodel.cn/api/paas/v4/"
     private val defaultSystemMsg = """
         你是OCR后端，请将你看到的内容输出成文本,禁止重复说一个词
     """.trimIndent()
+    private val defaultModel = "GLM-4V-Flash"
 
     override suspend fun recognize(screen: ByteArray): OCRResult {
         val imgBase64 = screen.encodeBase64()
-//        val messages: MutableList<ChatMessage> = ArrayList()
-//        val contentList: MutableList<Map<String, Any>> = ArrayList()
-//        contentList.add(mapOf(
-//            "type" to "text",
-//            "text" to config.systemMsg
-//        ))
-//        contentList.add(mapOf(
-//            "type" to "image_url",
-//            "image_url" to mapOf(
-//                "url" to imgBase64
-//            )
-//        ))
-//        val chatMessage = ChatMessage(ChatMessageRole.USER.value(), contentList)
-//        messages.add(chatMessage)
-//
-//        val chatCompletionRequest = builder()
-//            .model(config.model)
-//            .stream(false)
-//            .invokeMethod(Constants.invokeMethod)
-//            .messages(messages)
-//            .build()
         val chatCompletionRequest = ChatCompletionRequest(
             model = ModelId(config.model),
             messages = listOf(
@@ -128,16 +105,7 @@ class OCRByZhiPuPlugin(metadata: PluginMetadata): AbsOCRPlugin(metadata) {
         }
     }
 
-//    private val client: ClientV4 by lazy {
-//        ClientV4.Builder(config.apiKey).networkConfig(
-//            60,
-//            60,
-//            60,
-//            60,
-//            TimeUnit.SECONDS
-//        ).build()
-//    }
-    private val openAI by lazy { OpenAI(config.apiKey, host = OpenAIHost("https://open.bigmodel.cn/api/paas/v4/")) }
+    private val openAI by lazy { OpenAI(config.apiKey, host = OpenAIHost(config.baseUrl)) }
     override fun load() {
         try {
             config = ojson.decodeFromString(configFile.readText())
@@ -145,7 +113,7 @@ class OCRByZhiPuPlugin(metadata: PluginMetadata): AbsOCRPlugin(metadata) {
             ologger.warn { "加载配置文件时遇到错误，已复原: ${configFile.absolutePath}" }
             configFile.renameTo(File(configFile.parentFile, "config.json.old"))
             //TODO remove private api key
-            config = ScreenLanguageConverterByZhiPuPluginConfig("2137bdde5a5344618ac99458a160430d.SQsjadVmdhLb5CgN", "GLM-4V-Flash", defaultSystemMsg, 0.1, 1.0, 2.0, "")
+            config = ScreenLanguageConverterByZhiPuPluginConfig(defaultBaseUrl, "2137bdde5a5344618ac99458a160430d.SQsjadVmdhLb5CgN", defaultModel, defaultSystemMsg, 0.1, 1.0, 2.0)
             configFile.writeText(ojson.encodeToString(config))
         }
         ologger.info { "Loaded" }
@@ -159,54 +127,62 @@ class OCRByZhiPuPlugin(metadata: PluginMetadata): AbsOCRPlugin(metadata) {
     override fun UI() {
         val scope = rememberCoroutineScope()
         Column {
+            var apiBaseUrl by remember { mutableStateOf(config.baseUrl) }
+            OutlinedTextField(apiBaseUrl, {
+                apiBaseUrl = it
+                savedConfig.value = false
+                _initialized.value = false
+            }, label = {
+                Text("API-BaseUrl")
+            }, modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 3.dp))
             var apiKey by remember { mutableStateOf(config.apiKey) }
-            TextField(apiKey, {
+            OutlinedTextField(apiKey, {
                 apiKey = it
                 savedConfig.value = false
                 _initialized.value = false
             }, label = {
                 Text("API-Key")
-            })
+            }, modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 3.dp))
             var model by remember { mutableStateOf(config.model) }
-            TextField(model, {
+            OutlinedTextField(model, {
                 model = it
                 savedConfig.value = false
                 _initialized.value = false
             }, label = {
                 Text("API-Model")
-            })
+            }, modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 3.dp))
             var sysMsg by remember { mutableStateOf(config.systemMsg) }
-            TextField(sysMsg, {
+            OutlinedTextField(sysMsg, {
                 sysMsg = it
                 savedConfig.value = false
                 _initialized.value = false
             }, label = {
                 Text("API-SystemMessage")
-            })
+            }, modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 3.dp))
             var temperatureStr by remember { mutableStateOf(config.temperature.toString()) }
-            TextField(temperatureStr, {
+            OutlinedTextField(temperatureStr, {
                 temperatureStr = it
                 savedConfig.value = false
                 _initialized.value = false
             }, label = {
                 Text("API-temperatureStr")
-            })
+            }, modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 3.dp))
             var topPStr by remember { mutableStateOf(config.topP.toString()) }
-            TextField(topPStr, {
+            OutlinedTextField(topPStr, {
                 topPStr = it
                 savedConfig.value = false
                 _initialized.value = false
             }, label = {
                 Text("API-topP")
-            })
+            }, modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 3.dp))
             var frequencyPenaltyStr by remember { mutableStateOf(config.frequencyPenalty.toString()) }
-            TextField(frequencyPenaltyStr, {
+            OutlinedTextField(frequencyPenaltyStr, {
                 frequencyPenaltyStr = it
                 savedConfig.value = false
                 _initialized.value = false
             }, label = {
                 Text("API-frequencyPenalty")
-            })
+            }, modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 3.dp))
 
             var saveText = "Save"
             Button(onClick = {
@@ -220,13 +196,13 @@ class OCRByZhiPuPlugin(metadata: PluginMetadata): AbsOCRPlugin(metadata) {
                         frequencyPenaltyStr.toDoubleOrNull() != null
                     ) {
                         val newConfig = ScreenLanguageConverterByZhiPuPluginConfig(
+                            apiBaseUrl,
                             apiKey,
                             model,
                             sysMsg,
                             temperatureStr.toDouble(),
                             topPStr.toDouble(),
                             frequencyPenaltyStr.toDouble(),
-                            ""//TODO use backupOCRAPI
                         )
                         configFile.writeText(ojson.encodeToString(newConfig))
                         config = newConfig
@@ -296,5 +272,12 @@ class OCRByZhiPuPlugin(metadata: PluginMetadata): AbsOCRPlugin(metadata) {
             "1305" -> AIErrorType.API_RATE_LIMIT_CONCURRENCY// 原第20位
             else -> AIErrorType.UNKNOWN
         }
+    }
+
+    override val settingTabName: String = "OCRByOpenAIAPI"
+
+    @Composable
+    override fun SettingTabUIShader() {
+        UI()
     }
 }

@@ -101,6 +101,10 @@ object DataDB {
         }
     }
 
+    fun listMark(timestamp: Long): List<String> {
+        return getData(timestamp)?.mark?.split("\n")?: throw IllegalArgumentException("timestamp $timestamp not found")
+    }
+
     fun listTimestampWithMark(mark: String): List<Long> {
         return dataDBQueries.listTimestampWithMark(mark).executeAsList()
     }

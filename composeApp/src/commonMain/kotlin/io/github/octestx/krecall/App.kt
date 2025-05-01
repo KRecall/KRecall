@@ -13,6 +13,7 @@ import coil3.memory.MemoryCache
 import coil3.request.crossfade
 import io.github.octestx.basic.multiplatform.ui.ui.BasicMUIWrapper
 import io.github.octestx.basic.multiplatform.ui.ui.core.AbsUIPage
+import io.github.octestx.krecall.plugins.PluginAbilityManager
 import io.github.octestx.krecall.plugins.PluginManager
 import io.github.octestx.krecall.repository.ConfigManager
 import io.github.octestx.krecall.ui.TimestampViewPage
@@ -179,6 +180,8 @@ class AppMainPage(model: AppMainPageModel): AbsUIPage<Any?, AppMainPage.AppMainP
                         }
                         page.Main(Unit)
                     }
+
+                    PluginAbilityManager.bindPluginRouter(this)
                 }
 
 

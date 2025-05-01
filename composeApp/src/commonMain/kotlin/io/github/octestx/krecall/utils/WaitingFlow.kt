@@ -4,6 +4,11 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import java.io.Closeable
 
+/**
+ * Queue-based sequencer for managing ordered execution of animations or tasks.
+ *
+ * Ensures sequential processing of queued items with built-in waiting mechanism.
+ */
 class WaitingFlow(val delay: Long = 10): Closeable {
     // 用协程通道实现请求队列
     private val requestChannel = Channel<CompletableDeferred<Boolean>>(Channel.UNLIMITED)
