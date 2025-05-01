@@ -24,19 +24,22 @@ jobs:
       - name: Build desktopJar
         run: ./gradlew desktopJar
 
-      - name: Find JAR file
-        id: find-jar
+      - name: Install Conveyor
         run: |
-          JAR_PATH=$(find . -path '*/composeApp/build/libs/*.jar' -type f -print -quit)
-          echo "JAR_PATH=$JAR_PATH" >> $GITHUB_ENV
-          echo "JAR_NAME=$(basename $JAR_PATH)" >> $GITHUB_ENV
+          # 下载并安装 Conveyor CLI
+          curl -L https://github.com/hydraulic-software/conveyor/releases/download/v8.0.0/conveyor-8.0.0-linux-x64.zip -o conveyor.zip
+          unzip conveyor.zip
+          echo "$(pwd)/conveyor-8.0.0/bin" >> $GITHUB_PATH
 
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Generate Package with Conveyor
+        run: |
+          conveyor make --stacktrace site
+
+      - name: Upload Package to Release
+        uses: softprops/action-gh-release@v1
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{ env.JAR_PATH }}
-          asset_name: ${{ env.JAR_NAME }}
-          asset_content_type: application/java-archive
+          files: |
+            output/*.zip
+            output/*.deb
+            output/*.tar.gz
+          token: ${{ secrets.GITHUB_TOKEN }}
