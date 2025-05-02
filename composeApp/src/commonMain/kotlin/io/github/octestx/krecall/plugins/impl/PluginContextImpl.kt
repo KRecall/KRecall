@@ -75,11 +75,11 @@ class PluginContextImpl(metadata: PluginMetadata): PluginContext(metadata) {
         }
 
         override suspend fun navigateBack() {
-            TODO("Not yet implemented")
+            PluginAbilityManager.navigateBack()
         }
 
         override suspend fun navigateTo(route: String, vararg args: Pair<String, Any?>) {
-            TODO("Not yet implemented")
+            PluginAbilityManager.navigateTo(route, *args)
         }
 
         override suspend fun sendMessage(text: String) {

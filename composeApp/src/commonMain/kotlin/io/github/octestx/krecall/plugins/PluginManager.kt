@@ -2,8 +2,8 @@ package io.github.octestx.krecall.plugins
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import io.github.octestx.basic.multiplatform.common.exceptions.InvalidKeyPluginException
 import io.github.octestx.basic.multiplatform.common.utils.OS
-import io.github.octestx.krecall.exceptions.InvalidKeyPluginException
 import io.github.octestx.krecall.plugins.basic.*
 import io.github.octestx.krecall.plugins.impl.PluginContextImpl
 import io.github.octestx.krecall.repository.ConfigManager
@@ -49,7 +49,7 @@ object PluginManager {
             if (metadata.supportPlatform.contains(OS.currentOS).not()) continue
             val plugin = pluginCreator(metadata)
             plugins[metadata] = plugin
-            plugin.load()
+            plugin.load(PluginContextImpl(plugin.metadata))
             PluginAbilityManager.registerPlugin(plugin)
             when(plugin) {
                 is AbsCaptureScreenPlugin -> _availableCaptureScreenPlugins[metadata] = plugin
@@ -194,15 +194,15 @@ object PluginManager {
             _needJumpConfigUI.value = true
             return
         }
-        captureScreenPlugin.tryInit(PluginContextImpl(captureScreenPlugin.metadata)).apply {
+        captureScreenPlugin.tryInit().apply {
             if (this is PluginBasic.InitResult.Failed || this is PluginBasic.InitResult.RequestConfigUI) _needJumpConfigUI.value = true
             if (this is PluginBasic.InitResult.Failed) ologger.error(exception) { "Try to init CaptureScreenPlugin catch: ${exception.message}" }
         }
-        storagePlugin.tryInit(PluginContextImpl(storagePlugin.metadata)).apply {
+        storagePlugin.tryInit().apply {
             if (this is PluginBasic.InitResult.Failed || this is PluginBasic.InitResult.RequestConfigUI) _needJumpConfigUI.value = true
             if (this is PluginBasic.InitResult.Failed) ologger.error(exception) { "Try to init StoragePlugin catch: ${exception.message}" }
         }
-        ocrPlugin.tryInit(PluginContextImpl(ocrPlugin.metadata)).apply {
+        ocrPlugin.tryInit().apply {
             if (this is PluginBasic.InitResult.Failed || this is PluginBasic.InitResult.RequestConfigUI) _needJumpConfigUI.value = true
             if (this is PluginBasic.InitResult.Failed) ologger.error(exception) { "Try to init OCRPlugin catch: ${exception.message}" }
         }
@@ -218,4 +218,4 @@ object PluginManager {
     }
 }
 
-suspend fun PluginBasic.tryInit() = tryInit(PluginContextImpl(metadata))
+suspend fun PluginBasic.tryInit() = tryInit()

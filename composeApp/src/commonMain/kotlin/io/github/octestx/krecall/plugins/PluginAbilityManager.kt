@@ -18,6 +18,7 @@ import io.github.octestx.krecall.plugins.basic.PluginAbilityInterfaces
 import io.github.octestx.krecall.plugins.basic.PluginBasic
 import io.github.octestx.krecall.plugins.basic.PluginMetadata
 import io.klogging.noCoLogger
+import moe.tlaster.precompose.navigation.Navigator
 import moe.tlaster.precompose.navigation.RouteBuilder
 
 object PluginAbilityManager {
@@ -103,6 +104,22 @@ object PluginAbilityManager {
             }
         }
     }
+
+    private lateinit var navigator: Navigator
+    fun configNavigator(navigator: Navigator) {
+        this.navigator = navigator
+    }
+    suspend fun navigateBack() {
+        navigator.goBack()
+    }
+    suspend fun navigateTo(route: String, vararg args: Pair<String, Any?>) {
+        navigator.navigate(route)
+    }
+
+
+
+
+
 
     fun registerPlugin(plugin: PluginBasic) {
         if (plugin is PluginAbilityInterfaces.DrawerUI) {

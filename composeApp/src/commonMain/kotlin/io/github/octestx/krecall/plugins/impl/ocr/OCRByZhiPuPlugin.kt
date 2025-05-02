@@ -15,11 +15,10 @@ import com.aallam.openai.api.exception.OpenAIErrorDetails
 import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.OpenAI
 import com.aallam.openai.client.OpenAIHost
+import io.github.octestx.basic.multiplatform.common.exceptions.ConfigurationNotSavedException
 import io.github.octestx.basic.multiplatform.common.utils.OS
 import io.github.octestx.basic.multiplatform.common.utils.ojson
-import io.github.octestx.krecall.exceptions.ConfigurationNotSavedException
 import io.github.octestx.krecall.plugins.basic.*
-import io.github.octestx.krecall.plugins.impl.storage.OTStoragePlugin
 import io.klogging.noCoLogger
 import io.ktor.util.*
 import kotlinx.coroutines.delay
@@ -39,7 +38,7 @@ class OCRByZhiPuPlugin(metadata: PluginMetadata): AbsOCRPlugin(metadata), Plugin
             mainClass = "io.github.octestx.krecall.plugins.impl.ocr.OCRByZhiPuPlugin"
         )
     }
-    private val ologger = noCoLogger<OTStoragePlugin>()
+    private val ologger = noCoLogger<OCRByZhiPuPlugin>()
     private val configFile = File(pluginDir, "config.json")
     @Volatile
     private lateinit var config: ScreenLanguageConverterByZhiPuPluginConfig
@@ -106,7 +105,7 @@ class OCRByZhiPuPlugin(metadata: PluginMetadata): AbsOCRPlugin(metadata), Plugin
     }
 
     private val openAI by lazy { OpenAI(config.apiKey, host = OpenAIHost(config.baseUrl)) }
-    override fun load() {
+    override fun loadInner(context: PluginContext) {
         try {
             config = ojson.decodeFromString(configFile.readText())
         } catch (e: Throwable) {
@@ -223,7 +222,7 @@ class OCRByZhiPuPlugin(metadata: PluginMetadata): AbsOCRPlugin(metadata), Plugin
         }
     }
 
-    override suspend fun tryInitInner(context: PluginContext): InitResult {
+    override suspend fun tryInitInner(): InitResult {
 //        runBlocking { convert(File("/home/octest/Myself/tmp/Screenshot_20250301_234058.png").readBytes()) }
         val confined = config.apiKey.isNotEmpty() && config.model.isNotEmpty()
         if (savedConfig.value.not()) {

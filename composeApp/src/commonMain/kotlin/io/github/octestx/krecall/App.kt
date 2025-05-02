@@ -13,6 +13,7 @@ import coil3.memory.MemoryCache
 import coil3.request.crossfade
 import io.github.octestx.basic.multiplatform.ui.ui.BasicMUIWrapper
 import io.github.octestx.basic.multiplatform.ui.ui.core.AbsUIPage
+import io.github.octestx.krecall.nav.GlobalNavDataExchangeCache
 import io.github.octestx.krecall.plugins.PluginAbilityManager
 import io.github.octestx.krecall.plugins.PluginManager
 import io.github.octestx.krecall.repository.ConfigManager
@@ -133,7 +134,7 @@ class AppMainPage(model: AppMainPageModel): AbsUIPage<Any?, AppMainPage.AppMainP
                                 navigate = {
                                     state.navigator.navigate(it)
                                 }, putNavData = { key, value ->
-                                    state.navDataExchangeCache[key] = value
+                                    GlobalNavDataExchangeCache.putData(key, value)
                                 }
                             )
                         }
@@ -147,10 +148,14 @@ class AppMainPage(model: AppMainPageModel): AbsUIPage<Any?, AppMainPage.AppMainP
                         navTransition = NavTransition(),
                     ) {
                         val modelDataId = it.query<String>("modelDataId")
+                        if (modelDataId == null) {
+                            state.navigator.goBack()
+                            return@scene
+                        }
                         LaunchedEffect(Unit) {
                             ologger.info { "ReceiveModelDataId: $modelDataId" }
                         }
-                        val modelData: TimestampViewPage.TimestampViewPageModelData = state.navDataExchangeCache[modelDataId] as TimestampViewPage.TimestampViewPageModelData
+                        val modelData: TimestampViewPage.TimestampViewPageModelData = GlobalNavDataExchangeCache.getAndDestroyData(modelDataId) as TimestampViewPage.TimestampViewPageModelData
                         val model = rememberSaveable { TimestampViewPage.TimestampViewPageModel {
                             state.navigator.goBack()
                         } }
@@ -168,8 +173,7 @@ class AppMainPage(model: AppMainPageModel): AbsUIPage<Any?, AppMainPage.AppMainP
                                 navigate = { target ->
                                     state.navigator.navigate(target)
                                 }, putNavData = { key, value ->
-                                    state.navDataExchangeCache[key] = value
-
+                                    GlobalNavDataExchangeCache.putData(key, value)
                                 }, goBack = {
                                     state.navigator.goBack()
                                 }
@@ -207,16 +211,13 @@ class AppMainPage(model: AppMainPageModel): AbsUIPage<Any?, AppMainPage.AppMainP
     }
     data class AppMainPageState(
         val navigator: Navigator,
-        val navDataExchangeCache: MutableMap<String, Any?>
     ): AbsUIState<AppMainPageAction>()
 
     class AppMainPageModel: AbsUIModel<Any?, AppMainPageState, AppMainPageAction>() {
-        private val navDataExchangeCache = mutableMapOf<String, Any?>()
         @Composable
         override fun CreateState(params: Any?): AppMainPageState {
             return AppMainPageState(
                 navigator = rememberNavigator(),
-                navDataExchangeCache = navDataExchangeCache
             )
         }
 

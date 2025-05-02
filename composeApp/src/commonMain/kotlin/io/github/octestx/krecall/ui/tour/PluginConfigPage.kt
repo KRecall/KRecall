@@ -21,14 +21,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import io.github.alexzhirkevich.compottie.*
+import io.github.octestx.basic.multiplatform.common.exceptions.ConfigurationNotSavedException
 import io.github.octestx.basic.multiplatform.ui.ui.core.AbsUIPage
 import io.github.octestx.basic.multiplatform.ui.ui.toast
 import io.github.octestx.basic.multiplatform.ui.ui.utils.ToastModel
 import io.github.octestx.krecall.composeapp.generated.resources.Res
-import io.github.octestx.krecall.exceptions.ConfigurationNotSavedException
 import io.github.octestx.krecall.plugins.PluginManager
 import io.github.octestx.krecall.plugins.basic.*
-import io.github.octestx.krecall.plugins.tryInit
 import io.klogging.noCoLogger
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi

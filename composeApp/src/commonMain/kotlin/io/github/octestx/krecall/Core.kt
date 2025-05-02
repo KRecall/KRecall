@@ -5,10 +5,9 @@ import arrow.fx.coroutines.await.ExperimentalAwaitAllApi
 import arrow.fx.coroutines.await.awaitAll
 import io.github.octestx.basic.multiplatform.common.BasicMultiplatformConfigModule
 import io.github.octestx.basic.multiplatform.common.JVMInitCenter
+import io.github.octestx.basic.multiplatform.common.exceptions.SingleInstanceException
 import io.github.octestx.basic.multiplatform.common.utils.checkSelfIsSingleInstance
 import io.github.octestx.basic.multiplatform.ui.JVMUIInitCenter
-import io.github.octestx.krecall.exceptions.InvalidKeyPluginException
-import io.github.octestx.krecall.exceptions.SingleInstanceException
 import io.github.octestx.krecall.plugins.PluginManager
 import io.github.octestx.krecall.plugins.basic.PluginBasicExt
 import io.github.octestx.krecall.plugins.basic.PluginEnvironment

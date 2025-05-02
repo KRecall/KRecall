@@ -1,7 +1,5 @@
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
@@ -14,12 +12,14 @@ import androidx.compose.ui.unit.dp
 import compose.icons.TablerIcons
 import compose.icons.tablericons.ArrowLeft
 import compose.icons.tablericons.ArrowRight
-import compose.icons.tablericons.Run
 import io.github.octestx.basic.multiplatform.common.utils.TimeStamp
+import io.github.octestx.krecall.composeapp.generated.resources.Res
+import io.github.octestx.krecall.composeapp.generated.resources.current_location
 import kotlinx.coroutines.delay
+import org.jetbrains.compose.resources.painterResource
 import kotlin.math.abs
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun TimestampRateController(
     timestamps: List<Long>,
@@ -70,13 +70,17 @@ fun TimestampRateController(
 
     Column(modifier.padding(16.dp)) {
         Row {
-            IconToggleButton(
-                theNowMode,
-                onCheckedChange = {
-                    changeTheNowMode(!theNowMode)
+            TooltipArea(tooltip = {
+                Text("锁定当前时间[$theNowMode]")
+            }) {
+                IconToggleButton(
+                    theNowMode,
+                    onCheckedChange = {
+                        changeTheNowMode(!theNowMode)
+                    }
+                ) {
+                    Icon(painterResource(Res.drawable.current_location), contentDescription = null, tint = if (theNowMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary)
                 }
-            ) {
-                Icon(TablerIcons.Run, contentDescription = null, tint = if (theNowMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary)
             }
             // 倍率指示器
             AnimatedContent(speedMultiplier) { speed ->
@@ -94,7 +98,7 @@ fun TimestampRateController(
                 } else {
                     changeIndex(0)
                 }
-            }, enabled = currentIndex - 1 >= 0) {
+            }, enabled = (currentIndex - 1 >= 0) && theNowMode.not()) {
                 Icon(
                     imageVector = TablerIcons.ArrowLeft,
                     contentDescription = null,
@@ -106,7 +110,7 @@ fun TimestampRateController(
                 if (newIndex >= 0) {
                     changeIndex(newIndex)
                 }
-            }, enabled = currentIndex - 1 >= 0) {
+            }, enabled = (currentIndex - 1 >= 0) && theNowMode.not()) {
                 Icon(
                     imageVector = TablerIcons.ArrowLeft,
                     contentDescription = null,
@@ -118,7 +122,7 @@ fun TimestampRateController(
                 if (newIndex <= timestamps.lastIndex) {
                     changeIndex(newIndex)
                 }
-            }, enabled = currentIndex + 1 <= timestamps.lastIndex) {
+            }, enabled = (currentIndex + 1 <= timestamps.lastIndex) && theNowMode.not()) {
                 Icon(
                     imageVector = TablerIcons.ArrowRight,
                     contentDescription = null,
@@ -132,7 +136,7 @@ fun TimestampRateController(
                 } else {
                     changeIndex(timestamps.lastIndex)
                 }
-            }, enabled = currentIndex + 1 <= timestamps.lastIndex) {
+            }, enabled = (currentIndex + 1 <= timestamps.lastIndex) && theNowMode.not()) {
                 Icon(
                     imageVector = TablerIcons.ArrowRight,
                     contentDescription = null,
@@ -153,13 +157,14 @@ fun TimestampRateController(
                 isDragging = false
             },
             valueRange = 0f..1f,
+            enabled = theNowMode.not(),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(64.dp),
             thumb = {
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(38.dp)
                         .background(
                             brush = Brush.radialGradient(
                                 colors = listOf(

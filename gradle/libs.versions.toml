@@ -28,9 +28,9 @@ opencv = "4.9.0-0"
 sqliteDriver = "2.0.2"
 uiTextAndroid = "1.7.8"
 
-basicMultiplatformLib = "0.1.0"
+basicMultiplatformLib = "0.1.1"
 basicMultiplatformUiLib = "0.1.4"
-kRecallBasicPluginLibrary = "1.4.6"
+kRecallBasicPluginLibrary = "1.4.9"
 
 [libraries]
 basic-multiplatform-lib = { module = "io.github.octestx:basic-multiplatform-lib", version.ref = "basicMultiplatformLib" }

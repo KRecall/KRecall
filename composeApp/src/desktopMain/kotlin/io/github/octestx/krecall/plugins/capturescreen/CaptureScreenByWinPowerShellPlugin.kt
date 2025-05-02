@@ -108,7 +108,7 @@ ${STR}title = if (${STR}length -gt 0) { ${STR}sb.ToString() } else { "Unknown" }
         }
     }
 
-    override fun load() {
+    override fun loadInner(context: PluginContext) {
         ologger.info { "Loaded" }
     }
 
@@ -148,7 +148,7 @@ ${STR}title = if (${STR}length -gt 0) { ${STR}sb.ToString() } else { "Unknown" }
     }
 
 
-    override suspend fun tryInitInner(context: PluginContext): InitResult {
+    override suspend fun tryInitInner(): InitResult {
         ologger.info { "TryInit" }
         val e = runBlocking {
             try {
