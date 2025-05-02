@@ -1,36 +1,56 @@
 package io.github.octestx.krecall
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.TrayState
 import coil3.ImageLoader
 import coil3.compose.setSingletonImageLoaderFactory
 import coil3.memory.MemoryCache
 import coil3.request.crossfade
+import io.github.octestx.basic.multiplatform.common.utils.ojson
 import io.github.octestx.basic.multiplatform.ui.ui.BasicMUIWrapper
 import io.github.octestx.basic.multiplatform.ui.ui.core.AbsUIPage
+import io.github.octestx.basic.multiplatform.ui.ui.global.Language
+import io.github.octestx.basic.multiplatform.ui.ui.global.LanguageRepository
+import io.github.octestx.krecall.model.InitConfig
 import io.github.octestx.krecall.nav.GlobalNavDataExchangeCache
 import io.github.octestx.krecall.plugins.PluginManager
 import io.github.octestx.krecall.plugins.impl.PluginAbilityManager
 import io.github.octestx.krecall.repository.ConfigManager
 import io.github.octestx.krecall.ui.TimestampViewPage
+import io.github.octestx.krecall.ui.animation.AnimationComponents
+import io.github.octestx.krecall.ui.callExtremeErrorWindow
 import io.github.octestx.krecall.ui.home.HomePage
 import io.github.octestx.krecall.ui.setting.SettingPage
-import io.github.octestx.krecall.ui.tour.LoadingPage
 import io.github.octestx.krecall.ui.tour.PluginConfigPage
 import io.github.octestx.krecall.ui.tour.RecallSettingPage
+import io.github.octestx.krecall.ui.tour.ViewKRecallUpdatedInfo
 import io.github.octestx.krecall.ui.tour.WelcomePage
 import io.klogging.noCoLogger
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import moe.tlaster.precompose.PreComposeApp
 import moe.tlaster.precompose.navigation.*
 import moe.tlaster.precompose.navigation.transition.NavTransition
+import org.jetbrains.compose.resources.ExperimentalResourceApi
+import java.io.File
 
-class AppMainPage(model: AppMainPageModel): AbsUIPage<Any?, AppMainPage.AppMainPageState, AppMainPage.AppMainPageAction>(model) {
+class AppMainPage(private val model: AppMainPageModel): AbsUIPage<Any?, AppMainPage.AppMainPageState, AppMainPage.AppMainPageAction>(model) {
     private val ologger = noCoLogger<AppMainPage>()
+    @OptIn(ExperimentalResourceApi::class)
     @Composable
     override fun UI(state: AppMainPageState) {
         BasicMUIWrapper {
@@ -49,6 +69,24 @@ class AppMainPage(model: AppMainPageModel): AbsUIPage<Any?, AppMainPage.AppMainP
                         .build()
                 }
 
+                val initConfigFile = remember {
+                    File(File(System.getProperty("user.dir")), "KRecall-INIT.json").apply {
+                        parentFile.mkdirs()
+                        createNewFile()
+                    }
+                }
+                var initConfig by remember {
+                    mutableStateOf(
+                        try {
+                            ojson.decodeFromString<InitConfig>(initConfigFile.readText())
+                        } catch (e: Throwable) {
+                            val config = InitConfig()
+                            val text = ojson.encodeToString(config)
+                            initConfigFile.writeText(text)
+                            config
+                        }
+                    )
+                }
                 NavHost(
                     // 将 Navigator 给到 NavHost
                     navigator = state.navigator,
@@ -77,35 +115,70 @@ class AppMainPage(model: AppMainPageModel): AbsUIPage<Any?, AppMainPage.AppMainP
                         route = "/loading",
                         navTransition = NavTransition(),
                     ) {
-                        val model = rememberSaveable() { LoadingPage.LoadingPageModel() }
-                        val page = rememberSaveable {
-                            LoadingPage(model)
+                        Box(Modifier.fillMaxSize()) {
+                            AnimationComponents.LoadingBig(Modifier.align(Alignment.Center))
                         }
-                        page.Main(Unit)
+                    }
+                    scene("/tour/selectLanguage") {
+                        val nextStep = {
+                            state.navigator.navigate("/tour/viewKRecallUpdatedInfo")
+                        }
+                        Column {
+                            Text("请选择语言")
+                            Button(onClick = {
+                                LanguageRepository.switchLanguage(Language.English)
+                                nextStep()
+                            }) {
+                                Text("English")
+                            }
+                            Button(onClick = {
+                                LanguageRepository.switchLanguage(Language.ChineseSimplified)
+                                nextStep()
+                            }) {
+                                Text("简体中文")
+                            }
+                        }
+                    }
+                    scene("/tour/viewKRecallUpdatedInfo") {
+                        ViewKRecallUpdatedInfo() { state.navigator.navigate("/tour/welcome") }
                     }
                     scene(
                         route = "/tour/welcome",
                         navTransition = NavTransition(),
                     ) {
                         val model = rememberSaveable { WelcomePage.WelcomePageModel(next = {
-                            state.navigator.navigate("/tour/recallSetting")
+                            state.navigator.navigate("/tour/initConfig")
                         }) }
                         val page = rememberSaveable {
                             WelcomePage(model)
                         }
                         page.Main(Unit)
                     }
-                    scene(
-                        route = "/tour/recallSetting",
-                        navTransition = NavTransition()
-                    ) {
-                        val model = rememberSaveable { RecallSettingPage.RecallSettingPageModel(next = {
-                            state.navigator.navigate("/tour/pluginConfigPage")
-                        }) }
-                        val page = rememberSaveable {
-                            RecallSettingPage(model)
+                    scene("/tour/initConfig") {
+                        InitConfig(initConfig, { initConfig = it }, initConfigFile, { state.navigator.navigate("/initCore") })
+                    }
+                    scene("/initCore") {
+                        var showProgress by remember { mutableStateOf(true) }
+                        AnimatedVisibility(visible = showProgress) {
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                AnimationComponents.LoadingBig(Modifier.align(Alignment.Center))
+                            }
                         }
-                        page.Main(Unit)
+                        LaunchedEffect(Unit) {
+                            val workDir = File(initConfig.dataDirAbsPath, "KRecall")
+                            val result = Core.init(model.trayState, workDir)
+                            result.onFailure {
+                                showProgress = false
+                                callExtremeErrorWindow(it)
+                            }
+                            result.onSuccess {
+                                if (PluginManager.needJumpConfigUI.value || ConfigManager.config.initPlugin.not()) {
+                                    state.navigator.navigate("/tour/pluginConfigPage")
+                                } else {
+                                    state.navigator.navigate("/home")
+                                }
+                            }
+                        }
                     }
                     scene(
                         route = "/tour/pluginConfigPage",
@@ -113,7 +186,7 @@ class AppMainPage(model: AppMainPageModel): AbsUIPage<Any?, AppMainPage.AppMainP
                     ) {
                         val model = rememberSaveable {
                             PluginConfigPage.PluginConfigModel() {
-                                state.navigator.navigate("/home", options = NavOptions(popUpTo = PopUpTo.Prev))
+                                state.navigator.navigate("/tour/recallSetting", options = NavOptions(popUpTo = PopUpTo.Prev))
                                 ConfigManager.save(ConfigManager.config.copy(
                                     initialized = true,
                                     initPlugin = true
@@ -122,6 +195,18 @@ class AppMainPage(model: AppMainPageModel): AbsUIPage<Any?, AppMainPage.AppMainP
                         }
                         val page = rememberSaveable {
                             PluginConfigPage(model)
+                        }
+                        page.Main(Unit)
+                    }
+                    scene(
+                        route = "/tour/recallSetting",
+                        navTransition = NavTransition()
+                    ) {
+                        val model = rememberSaveable { RecallSettingPage.RecallSettingPageModel(next = {
+                            state.navigator.navigate("/home")
+                        }) }
+                        val page = rememberSaveable {
+                            RecallSettingPage(model)
                         }
                         page.Main(Unit)
                     }
@@ -155,7 +240,7 @@ class AppMainPage(model: AppMainPageModel): AbsUIPage<Any?, AppMainPage.AppMainP
                         LaunchedEffect(Unit) {
                             ologger.info { "ReceiveModelDataId: $modelDataId" }
                         }
-                        val modelData: TimestampViewPage.TimestampViewPageModelData = GlobalNavDataExchangeCache.getAndDestroyData(modelDataId) as TimestampViewPage.TimestampViewPageModelData
+                        val modelData: TimestampViewPage.TimestampViewPageModelData = remember { GlobalNavDataExchangeCache.getAndDestroyData(modelDataId) as TimestampViewPage.TimestampViewPageModelData }
                         val model = rememberSaveable { TimestampViewPage.TimestampViewPageModel {
                             state.navigator.goBack()
                         } }
@@ -192,14 +277,10 @@ class AppMainPage(model: AppMainPageModel): AbsUIPage<Any?, AppMainPage.AppMainP
 
 
                 LaunchedEffect(Unit) {
-                    if (ConfigManager.config.initialized) {
-                        if (PluginManager.needJumpConfigUI.value || ConfigManager.config.initPlugin.not()) {
-                            state.navigator.navigate("/tour/pluginConfigPage")
-                        } else {
-                            state.navigator.navigate("/home")
-                        }
+                    if (initConfig.dataDirAbsPath == null) {
+                        state.navigator.navigate("/tour/selectLanguage")
                     } else {
-                        state.navigator.navigate("/tour/welcome")
+                        state.navigator.navigate("/initCore")
                     }
                 }
             }
@@ -213,7 +294,7 @@ class AppMainPage(model: AppMainPageModel): AbsUIPage<Any?, AppMainPage.AppMainP
         val navigator: Navigator,
     ): AbsUIState<AppMainPageAction>()
 
-    class AppMainPageModel: AbsUIModel<Any?, AppMainPageState, AppMainPageAction>() {
+    class AppMainPageModel(val trayState: TrayState): AbsUIModel<Any?, AppMainPageState, AppMainPageAction>() {
         @Composable
         override fun CreateState(params: Any?): AppMainPageState {
             return AppMainPageState(
@@ -223,6 +304,48 @@ class AppMainPage(model: AppMainPageModel): AbsUIPage<Any?, AppMainPage.AppMainP
 
         override fun actionExecute(params: Any?, action: AppMainPageAction) {
 
+        }
+    }
+
+    @Composable
+    private fun InitConfig(
+        initConfig: InitConfig,
+        changeInitConfig: (InitConfig) -> Unit,
+        initConfigFile: File,
+        nextStep: () -> Unit
+    ) {
+        if (initConfig.dataDirAbsPath == null) {
+            val scope = rememberCoroutineScope()
+            Column {
+                Text("请先设置数据目录[第一次使用只要输入空文件夹目录.已有数据用户请输入数据目录,不是名称为KRecall的目录，而是它的父目录]！")
+                var path by remember { mutableStateOf("") }
+                TextField(path, { path = it})
+                var showApplyError by remember { mutableStateOf("") }
+                AnimatedVisibility(showApplyError.isNotEmpty()) {
+                    Text(text = showApplyError, modifier = Modifier.padding(45.dp).background(MaterialTheme.colorScheme.errorContainer), color = MaterialTheme.colorScheme.error, fontStyle = MaterialTheme.typography.bodyMedium.fontStyle)
+                }
+                Button(onClick = {
+                    val workDir = File(path)
+                    if (workDir.exists()) {
+                        val config = initConfig.copy(dataDirAbsPath = workDir.absolutePath)
+                        val text = ojson.encodeToString(config)
+                        initConfigFile.writeText(text)
+                        changeInitConfig(config)
+                    } else {
+                        scope.launch {
+                            showApplyError = "目录无效"
+                            delay(3000)
+                            showApplyError = ""
+                        }
+                    }
+                }) {
+                    Text("Apply")
+                }
+            }
+        } else {
+            LaunchedEffect(Unit) {
+                nextStep()
+            }
         }
     }
 }

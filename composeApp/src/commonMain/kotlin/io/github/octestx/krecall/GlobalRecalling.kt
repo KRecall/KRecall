@@ -29,6 +29,7 @@ object GlobalRecalling {
 
     private val imageLoadingDispatcher = Dispatchers.IO.limitedParallelism(10)
     private const val MAX_CACHE_SIZE = 100
+
     suspend fun putImageToCache(timestamp: Long, recreate: suspend () -> ByteArray) {
         withContext(imageLoadingDispatcher) {
             imageCreatorCache[timestamp] = recreate

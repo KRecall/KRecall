@@ -89,34 +89,6 @@ class HomePage(model: HomePageModel): AbsUIPage<Any?, HomePage.HomePageState, Ho
             }
         ) {
             Column {
-//                TabRow(selectedTabIndex = currentTabIndex) {
-//                    Tab(
-//                        selected = currentTabIndex == 0,
-//                        onClick = {  }
-//                    ) {
-//                        Text("Home")
-//                    }
-//                    Tab(
-//                        selected = currentTabIndex == 1,
-//                        onClick = { currentTabIndex = 1 }
-//                    ) {
-//                        Text("Search")
-//                    }
-//                    val count = GlobalRecalling.errorTimestampCount.collectAsState().value
-//                    Tab(
-//                        selected = currentTabIndex == 2,
-//                        onClick = { currentTabIndex = 2 },
-//                        enabled = count > 0
-//                    ) {
-//                        AnimatedContent(count) {
-//                            if (count > 0) {
-//                                Text("ViewProcessFails: $it")
-//                            } else {
-//                                Text("No ViewProcessFails")
-//                            }
-//                        }
-//                    }
-//                }
                 val homeModel = rememberSaveable() { HomeTab.HomePageModel() }
                 val homeTab = rememberSaveable() { HomeTab(homeModel) }
 
@@ -131,7 +103,7 @@ class HomePage(model: HomePageModel): AbsUIPage<Any?, HomePage.HomePageState, Ho
 
                 val viewProcessFailsModel = rememberSaveable() { ViewProcessFailsTab.ViewProcessFailsPageModel(jumpView = { data, search ->
                     val modelData = TimestampViewPage.TimestampViewPageModelData(data, search)
-                    val modelDataId = "Homepage-viewProcessFailsTab jump to timestampViewPage: modelData"
+                    val modelDataId = "Homepage-viewProcessFailsTab jump to timestampViewPage: modelData(${System.nanoTime()})"
                     state.action(HomePageAction.PutNavData(modelDataId, modelData))
                     ologger.info { "SendModelDataId: $modelDataId" }
                     state.action(HomePageAction.Navigate("/timestampViewPage?modelDataId=$modelDataId"))

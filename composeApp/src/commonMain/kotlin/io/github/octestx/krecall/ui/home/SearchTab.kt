@@ -37,7 +37,7 @@ import models.sqld.DataItem
 
 class SearchTab(model: SearchPageModel): AbsUIPage<Any?, SearchTab.SearchPageState, SearchTab.SearchPageAction>(model) {
     private val ologger = noCoLogger<SearchTab>()
-    val waitingFlow = WaitingFlow()
+    private val waitingFlow = WaitingFlow()
     @Composable
     override fun UI(state: SearchPageState) {
         MaterialTheme {

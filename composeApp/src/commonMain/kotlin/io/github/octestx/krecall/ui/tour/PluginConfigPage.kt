@@ -2,7 +2,6 @@ package io.github.octestx.krecall.ui.tour
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -20,14 +19,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import io.github.alexzhirkevich.compottie.*
 import io.github.octestx.basic.multiplatform.common.exceptions.ConfigurationNotSavedException
 import io.github.octestx.basic.multiplatform.ui.ui.core.AbsUIPage
 import io.github.octestx.basic.multiplatform.ui.ui.toast
 import io.github.octestx.basic.multiplatform.ui.ui.utils.ToastModel
-import io.github.octestx.krecall.composeapp.generated.resources.Res
 import io.github.octestx.krecall.plugins.PluginManager
 import io.github.octestx.krecall.plugins.basic.*
+import io.github.octestx.krecall.ui.animation.AnimationComponents
 import io.klogging.noCoLogger
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
@@ -137,20 +135,7 @@ class PluginConfigPage(model: PluginConfigModel): AbsUIPage<Any?, PluginConfigPa
                     AnimatedContent(err) { err ->
                         if (err != null) {
                             Row {
-                                val composition by rememberLottieComposition {
-                                    LottieCompositionSpec.DotLottie(
-                                        Res.readBytes("files/warning.lottie")
-                                    )
-                                }
-
-                                Image(
-                                    painter = rememberLottiePainter(
-                                        composition = composition,
-                                        iterations = Compottie.IterateForever
-                                    ),
-                                    contentDescription = "Lottie animation",
-                                    modifier = Modifier.size(32.dp)
-                                )
+                                AnimationComponents.WarningSmall()
                                 when (err) {
                                     is ConfigurationNotSavedException -> {
                                         Text("配置未保存: ${err.message}", modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.primary), color = MaterialTheme.colorScheme.onPrimary)
