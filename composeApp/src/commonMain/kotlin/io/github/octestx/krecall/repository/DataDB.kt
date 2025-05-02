@@ -2,8 +2,8 @@ package io.github.octestx.krecall.repository
 
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
-import io.github.octestx.krecall.plugins.basic.AIResult
-import io.github.octestx.krecall.plugins.basic.exceptionSerializableOjson
+import io.github.octestx.basic.multiplatform.common.utils.AIResult
+import io.github.octestx.krecall.utils.exceptionSerializableOjson
 import io.klogging.noCoLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

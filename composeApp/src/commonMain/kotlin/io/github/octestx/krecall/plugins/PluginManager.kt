@@ -5,6 +5,7 @@ import androidx.compose.runtime.collectAsState
 import io.github.octestx.basic.multiplatform.common.exceptions.InvalidKeyPluginException
 import io.github.octestx.basic.multiplatform.common.utils.OS
 import io.github.octestx.krecall.plugins.basic.*
+import io.github.octestx.krecall.plugins.impl.PluginAbilityManager
 import io.github.octestx.krecall.plugins.impl.PluginContextImpl
 import io.github.octestx.krecall.repository.ConfigManager
 import io.klogging.noCoLogger

@@ -22,7 +22,7 @@ import io.github.octestx.basic.multiplatform.ui.ui.toast
 import io.github.octestx.basic.multiplatform.ui.ui.utils.EnhancedDropdownSelector
 import io.github.octestx.krecall.composeapp.generated.resources.Res
 import io.github.octestx.krecall.composeapp.generated.resources.developer_avatar
-import io.github.octestx.krecall.plugins.PluginAbilityManager
+import io.github.octestx.krecall.plugins.impl.PluginAbilityManager
 import io.github.octestx.krecall.repository.ConfigManager
 import io.klogging.noCoLogger
 import org.jetbrains.compose.resources.InternalResourceApi

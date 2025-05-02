@@ -2,7 +2,6 @@ package io.github.octestx.krecall.plugins.impl
 
 import io.github.octestx.basic.multiplatform.ui.ui.utils.ToastModel
 import io.github.octestx.krecall.GlobalRecalling
-import io.github.octestx.krecall.plugins.PluginAbilityManager
 import io.github.octestx.krecall.plugins.PluginManager
 import io.github.octestx.krecall.plugins.basic.PluginAbility
 import io.github.octestx.krecall.plugins.basic.PluginContext

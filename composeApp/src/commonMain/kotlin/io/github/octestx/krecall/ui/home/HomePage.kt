@@ -13,7 +13,7 @@ import compose.icons.TablerIcons
 import compose.icons.tablericons.Settings
 import io.github.octestx.basic.multiplatform.ui.ui.core.AbsUIPage
 import io.github.octestx.krecall.GlobalRecalling
-import io.github.octestx.krecall.plugins.PluginAbilityManager
+import io.github.octestx.krecall.plugins.impl.PluginAbilityManager
 import io.github.octestx.krecall.ui.TimestampViewPage
 import io.klogging.noCoLogger
 import kotlinx.coroutines.CoroutineScope

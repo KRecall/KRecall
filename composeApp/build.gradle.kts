@@ -59,11 +59,6 @@ kotlin {
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.serialization.kotlinx.json)
 
-            implementation(libs.openai.client)
-            implementation(libs.oapi.java.sdk)
-
-            implementation(libs.opencv)
-
             implementation(libs.coil.compose)
             implementation(libs.kotlinx.datetime)
 

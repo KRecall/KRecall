@@ -6,9 +6,9 @@ import io.github.octestx.basic.multiplatform.common.utils.ObservableLinkedList
 import io.github.octestx.basic.multiplatform.common.utils.TimeStamp
 import io.github.octestx.basic.multiplatform.common.utils.synchronized
 import io.github.octestx.krecall.plugins.PluginManager
-import io.github.octestx.krecall.plugins.basic.exceptionSerializableOjson
 import io.github.octestx.krecall.repository.ConfigManager
 import io.github.octestx.krecall.repository.DataDB
+import io.github.octestx.krecall.utils.exceptionSerializableOjson
 import io.klogging.noCoLogger
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow

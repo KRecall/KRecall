@@ -22,13 +22,11 @@ kotlinx-coroutines = "1.10.1"
 kotlinxDatetime = "0.6.1"
 kotlinxSerializationJson = "1.8.0"
 ktorVersion = "3.1.0"
-oapiJavaSdk = "release-V4-2.3.0"
-openaiClient = "4.0.0"
 opencv = "4.9.0-0"
 sqliteDriver = "2.0.2"
 uiTextAndroid = "1.7.8"
 
-basicMultiplatformLib = "0.1.1"
+basicMultiplatformLib = "0.1.2"
 basicMultiplatformUiLib = "0.1.4"
 kRecallBasicPluginLibrary = "1.4.9"
 
@@ -64,9 +62,6 @@ ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negoti
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktorVersion" }
 ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktorVersion" }
 library = { module = "io.github.octestx.krecall.plugins.basiclib:library", version.ref = "kRecallBasicPluginLibrary" }
-oapi-java-sdk = { module = "cn.bigmodel.openapi:oapi-java-sdk", version.ref = "oapiJavaSdk" }
-openai-client = { module = "com.aallam.openai:openai-client", version.ref = "openaiClient" }
-opencv = { module = "org.openpnp:opencv", version.ref = "opencv" }
 sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqliteDriver" }
 
 [plugins]

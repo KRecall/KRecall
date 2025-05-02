@@ -1,4 +1,4 @@
-package io.github.octestx.krecall.plugins
+package io.github.octestx.krecall.plugins.impl
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -107,7 +107,7 @@ object PluginAbilityManager {
 
     private lateinit var navigator: Navigator
     fun configNavigator(navigator: Navigator) {
-        this.navigator = navigator
+        PluginAbilityManager.navigator = navigator
     }
     suspend fun navigateBack() {
         navigator.goBack()
