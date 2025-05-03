@@ -177,6 +177,7 @@ class AppMainPage(private val model: AppMainPageModel): AbsUIPage<Any?, AppMainP
                             }.onFailure {
                                 showProgress = false
                                 exceptionFeedback = it
+                                ologger.error(it) { "loadPlugins failed!" }
                             }
                         }
                         LaunchedEffect(Unit) {
@@ -195,13 +196,13 @@ class AppMainPage(private val model: AppMainPageModel): AbsUIPage<Any?, AppMainP
                                 if (exception != null) {
                                     Column {
                                         val scope = rememberCoroutineScope()
-                                        Text("加载插件失败", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.error)
                                         when (exception) {
                                             is InvalidKeyPluginException -> {
+                                                Text("加载插件失败", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.error)
                                                 Text("一些关键插件没有被加载,请检查插件目录是否存在关键插件的Jar包", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
                                             }
                                             else -> {
-                                                Text("加载插件失败", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
+                                                Text("加载插件失败", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.error)
                                             }
                                         }
                                         Button(onClick = {
