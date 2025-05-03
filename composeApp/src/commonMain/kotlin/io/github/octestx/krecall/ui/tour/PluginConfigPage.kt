@@ -10,10 +10,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollbarAdapter
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,7 +24,9 @@ import io.github.octestx.krecall.plugins.PluginManager
 import io.github.octestx.krecall.plugins.basic.*
 import io.github.octestx.krecall.ui.animation.AnimationComponents
 import io.klogging.noCoLogger
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 
 class PluginConfigPage(model: PluginConfigModel): AbsUIPage<Any?, PluginConfigPage.PluginConfigState, PluginConfigPage.PluginConfigAction>(model) {
@@ -36,7 +35,7 @@ class PluginConfigPage(model: PluginConfigModel): AbsUIPage<Any?, PluginConfigPa
     override fun UI(state: PluginConfigState) {
         MaterialTheme {
             Column(Modifier.background(MaterialTheme.colorScheme.background)) {
-                Row {
+                Row(modifier = Modifier.padding(6.dp)) {
                     val allInitialized = PluginManager.AllPluginInitialized()
                     if (allInitialized) {
                         Text("AllPluginsInitialized", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleMedium)
@@ -56,7 +55,7 @@ class PluginConfigPage(model: PluginConfigModel): AbsUIPage<Any?, PluginConfigPa
                     }
 
                 }
-                Box(Modifier.fillMaxSize()) {
+                Box(Modifier.fillMaxSize().padding(6.dp)) {
                     val scrollState = rememberLazyListState()
                     LazyColumn(state = scrollState) {
                         item {
@@ -120,15 +119,26 @@ class PluginConfigPage(model: PluginConfigModel): AbsUIPage<Any?, PluginConfigPa
                             Text("$type[${it.metadata.pluginId}]: 未初始化[${err?.message}]", color = MaterialTheme.colorScheme.secondary, modifier = Modifier.weight(1f))
                         }
                         AnimatedVisibility(pluginData.getOrNull()?.initialized?.value != true) {
-                            Button(onClick = {
-                                scope.launch {
-                                    it.tryInit().also { initResult ->
-                                        err = if (initResult is PluginBasic.InitResult.Failed) initResult.exception
-                                        else null
+                            var initialing by remember(pluginData) { mutableStateOf(false) }
+                            AnimatedContent(initialing) { initialing2 ->
+                                if (initialing2) {
+                                    CircularProgressIndicator()
+                                } else {
+                                    Button(onClick = {
+                                        scope.launch {
+                                            withContext(Dispatchers.IO) {
+                                                initialing = true
+                                                it.tryInit().also { initResult ->
+                                                    err = if (initResult is PluginBasic.InitResult.Failed) initResult.exception
+                                                    else null
+                                                }
+                                                initialing = false
+                                            }
+                                        }
+                                    }) {
+                                        Text("INIT", modifier = Modifier.padding(4.dp))
                                     }
                                 }
-                            }) {
-                                Text("INIT", modifier = Modifier.padding(4.dp))
                             }
                         }
                     }
@@ -215,7 +225,6 @@ class PluginConfigPage(model: PluginConfigModel): AbsUIPage<Any?, PluginConfigPa
                         ologger.info { "ScreenLanguageConverterPlugin is not initialized" }
                     } else {
                         ologger.info { "All plugins are initialized" }
-                        toast.applyShow("TODO, ConfigDone")
                     }
                     configDone()
                 }

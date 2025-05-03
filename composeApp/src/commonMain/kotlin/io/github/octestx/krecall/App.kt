@@ -1,15 +1,10 @@
 package io.github.octestx.krecall
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -20,11 +15,13 @@ import coil3.ImageLoader
 import coil3.compose.setSingletonImageLoaderFactory
 import coil3.memory.MemoryCache
 import coil3.request.crossfade
+import io.github.octestx.basic.multiplatform.common.utils.link
 import io.github.octestx.basic.multiplatform.common.utils.ojson
 import io.github.octestx.basic.multiplatform.ui.ui.BasicMUIWrapper
 import io.github.octestx.basic.multiplatform.ui.ui.core.AbsUIPage
-import io.github.octestx.basic.multiplatform.ui.ui.global.Language
-import io.github.octestx.basic.multiplatform.ui.ui.global.LanguageRepository
+import io.github.octestx.basic.multiplatform.ui.ui.toast
+import io.github.octestx.basic.multiplatform.ui.ui.utils.ToastModel
+import io.github.octestx.krecall.exception.InvalidKeyPluginException
 import io.github.octestx.krecall.model.InitConfig
 import io.github.octestx.krecall.nav.GlobalNavDataExchangeCache
 import io.github.octestx.krecall.plugins.PluginManager
@@ -37,10 +34,11 @@ import io.github.octestx.krecall.ui.home.HomePage
 import io.github.octestx.krecall.ui.setting.SettingPage
 import io.github.octestx.krecall.ui.tour.PluginConfigPage
 import io.github.octestx.krecall.ui.tour.RecallSettingPage
-import io.github.octestx.krecall.ui.tour.ViewKRecallUpdatedInfo
+import io.github.octestx.krecall.ui.tour.SelectLanguage
 import io.github.octestx.krecall.ui.tour.WelcomePage
+import io.github.vinceglb.filekit.absolutePath
+import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import io.klogging.noCoLogger
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import moe.tlaster.precompose.PreComposeApp
 import moe.tlaster.precompose.navigation.*
@@ -120,27 +118,9 @@ class AppMainPage(private val model: AppMainPageModel): AbsUIPage<Any?, AppMainP
                         }
                     }
                     scene("/tour/selectLanguage") {
-                        val nextStep = {
-                            state.navigator.navigate("/tour/viewKRecallUpdatedInfo")
+                        SelectLanguage {
+                            state.navigator.navigate("/tour/welcome")
                         }
-                        Column {
-                            Text("请选择语言")
-                            Button(onClick = {
-                                LanguageRepository.switchLanguage(Language.English)
-                                nextStep()
-                            }) {
-                                Text("English")
-                            }
-                            Button(onClick = {
-                                LanguageRepository.switchLanguage(Language.ChineseSimplified)
-                                nextStep()
-                            }) {
-                                Text("简体中文")
-                            }
-                        }
-                    }
-                    scene("/tour/viewKRecallUpdatedInfo") {
-                        ViewKRecallUpdatedInfo() { state.navigator.navigate("/tour/welcome") }
                     }
                     scene(
                         route = "/tour/welcome",
@@ -172,10 +152,68 @@ class AppMainPage(private val model: AppMainPageModel): AbsUIPage<Any?, AppMainP
                                 callExtremeErrorWindow(it)
                             }
                             result.onSuccess {
-                                if (PluginManager.needJumpConfigUI.value || ConfigManager.config.initPlugin.not()) {
+                                state.navigator.navigate("/loadPlugins")
+                            }
+                        }
+                    }
+                    scene("/loadPlugins") {
+                        var showProgress by remember { mutableStateOf(true) }
+                        var exceptionFeedback by remember { mutableStateOf<Throwable?>(null) }
+                        suspend fun loadPlugins(): Result<Unit> = kotlin.runCatching {
+                            showProgress = true
+                            PluginManager.loadPlugins().onSuccess {
+                                PluginManager.initLoadedPlugins()
+                                showProgress = false
+                                if (ConfigManager.config.initPlugin.not()) {
+                                    state.navigator.navigate("/tour/pluginConfigPage")
+                                    return@runCatching
+                                }
+                                PluginManager.initAllPlugins()
+                                if (PluginManager.needJumpConfigUI.value) {
                                     state.navigator.navigate("/tour/pluginConfigPage")
                                 } else {
                                     state.navigator.navigate("/home")
+                                }
+                            }.onFailure {
+                                showProgress = false
+                                exceptionFeedback = it
+                            }
+                        }
+                        LaunchedEffect(Unit) {
+                            loadPlugins().onFailure {
+                                callExtremeErrorWindow(it)
+                            }
+                        }
+                        AnimatedContent(showProgress) { loading ->
+                            if (loading) {
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    Text("加载插件中", modifier = Modifier.align(Alignment.TopCenter).padding(16.dp), style = MaterialTheme.typography.titleLarge)
+                                    AnimationComponents.LoadingBig(Modifier.align(Alignment.Center))
+                                }
+                            } else {
+                                val exception = exceptionFeedback
+                                if (exception != null) {
+                                    Column {
+                                        val scope = rememberCoroutineScope()
+                                        Text("加载插件失败", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.error)
+                                        when (exception) {
+                                            is InvalidKeyPluginException -> {
+                                                Text("一些关键插件没有被加载,请检查插件目录是否存在关键插件的Jar包", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
+                                            }
+                                            else -> {
+                                                Text("加载插件失败", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
+                                            }
+                                        }
+                                        Button(onClick = {
+                                            scope.launch {
+                                                loadPlugins().onFailure {
+                                                    callExtremeErrorWindow(it)
+                                                }
+                                            }
+                                        }, modifier = Modifier.padding(16.dp)) {
+                                            Text("重试")
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -307,6 +345,7 @@ class AppMainPage(private val model: AppMainPageModel): AbsUIPage<Any?, AppMainP
         }
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     private fun InitConfig(
         initConfig: InitConfig,
@@ -315,31 +354,69 @@ class AppMainPage(private val model: AppMainPageModel): AbsUIPage<Any?, AppMainP
         nextStep: () -> Unit
     ) {
         if (initConfig.dataDirAbsPath == null) {
-            val scope = rememberCoroutineScope()
-            Column {
-                Text("请先设置数据目录[第一次使用只要输入空文件夹目录.已有数据用户请输入数据目录,不是名称为KRecall的目录，而是它的父目录]！")
-                var path by remember { mutableStateOf("") }
-                TextField(path, { path = it})
-                var showApplyError by remember { mutableStateOf("") }
-                AnimatedVisibility(showApplyError.isNotEmpty()) {
-                    Text(text = showApplyError, modifier = Modifier.padding(45.dp).background(MaterialTheme.colorScheme.errorContainer), color = MaterialTheme.colorScheme.error, fontStyle = MaterialTheme.typography.bodyMedium.fontStyle)
-                }
-                Button(onClick = {
-                    val workDir = File(path)
-                    if (workDir.exists()) {
-                        val config = initConfig.copy(dataDirAbsPath = workDir.absolutePath)
-                        val text = ojson.encodeToString(config)
-                        initConfigFile.writeText(text)
-                        changeInitConfig(config)
-                    } else {
-                        scope.launch {
-                            showApplyError = "目录无效"
-                            delay(3000)
-                            showApplyError = ""
+            var showCheckSelectWorkDirDialog: File? by remember { mutableStateOf(null) }
+
+            val workDir = showCheckSelectWorkDirDialog
+            if (workDir != null) {
+                BasicAlertDialog(onDismissRequest = {}) {
+                    Card(Modifier.background(MaterialTheme.colorScheme.background)) {
+                        val existKRecallDir = remember(workDir) {
+                            val krecallDir = workDir.link("KRecall")
+                            if (krecallDir.isFile) krecallDir.delete()
+                            krecallDir.exists()
+                        }
+                        if (existKRecallDir) {
+                            Text("发现已存在的KRecall数据目录，是否确认选择")
+                        } else {
+                            Text("未发现KRecall数据目录，如果你需要加载已有的KRecall数据目录, 请重新选择")
+                        }
+                        Row {
+                            Button(onClick = {
+                                showCheckSelectWorkDirDialog = null
+                            }, modifier = Modifier.padding(6.dp)) {
+                                Text("重新选择")
+                            }
+                            Button(onClick = {
+                                val config = initConfig.copy(dataDirAbsPath = workDir.absolutePath)
+                                val text = ojson.encodeToString(config)
+                                initConfigFile.writeText(text)
+                                changeInitConfig(config)
+                            }, modifier = Modifier.padding(6.dp)) {
+                                Text("确认选择")
+                            }
                         }
                     }
-                }) {
-                    Text("Apply")
+                }
+            }
+            val scope = rememberCoroutineScope()
+            Column(Modifier.padding(25.dp)) {
+                Text("请先设置数据目录[第一次使用只要输入空文件夹目录.已有数据用户请输入数据目录,不是名称为KRecall的目录，而是它的父目录]！")
+                var path by remember { mutableStateOf("") }
+                val pickWorkDirDialogLauncher = rememberDirectoryPickerLauncher { directory ->
+                    val absPath = directory?.absolutePath()
+                    if (absPath != null) {
+                        path = absPath
+                    }
+                }
+                OutlinedTextField(path, { path = it}, modifier = Modifier.fillMaxWidth())
+                Row {
+                    OutlinedButton(onClick = {
+                        pickWorkDirDialogLauncher.launch()
+                    }) {
+                        Text("选择目录")
+                    }
+                    OutlinedButton(onClick = {
+                        val workDir = File(path)
+                        if (workDir.exists()) {
+                            showCheckSelectWorkDirDialog = workDir
+                        } else {
+                            scope.launch {
+                                toast.applyShow("目录无效, 目录必须存在", type = ToastModel.Type.Error)
+                            }
+                        }
+                    }) {
+                        Text("Apply")
+                    }
                 }
             }
         } else {

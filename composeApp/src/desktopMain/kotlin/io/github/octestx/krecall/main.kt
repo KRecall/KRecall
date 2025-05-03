@@ -22,7 +22,6 @@ fun main() = application {
     extremeErrorWindowInject()
     // 创建系统托盘
     val trayState = rememberTrayState()
-    var step by remember { mutableStateOf(0) }
 
     //Other default is background running.
     var windowVisible by remember { mutableStateOf(

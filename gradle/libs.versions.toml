@@ -26,8 +26,8 @@ opencv = "4.9.0-0"
 sqliteDriver = "2.0.2"
 uiTextAndroid = "1.7.8"
 
-basicMultiplatformLib = "0.1.2"
-basicMultiplatformUiLib = "0.1.4"
+basicMultiplatformLib = "0.1.2.1"
+basicMultiplatformUiLib = "0.1.4.1"
 kRecallBasicPluginLibrary = "1.4.9"
 
 [libraries]

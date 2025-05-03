@@ -2,8 +2,9 @@ package io.github.octestx.krecall.plugins
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import io.github.octestx.basic.multiplatform.common.exceptions.InvalidKeyPluginException
+import arrow.atomic.AtomicBoolean
 import io.github.octestx.basic.multiplatform.common.utils.OS
+import io.github.octestx.krecall.exception.InvalidKeyPluginException
 import io.github.octestx.krecall.plugins.basic.*
 import io.github.octestx.krecall.plugins.impl.PluginAbilityManager
 import io.github.octestx.krecall.plugins.impl.PluginContextImpl
@@ -32,37 +33,46 @@ object PluginManager {
 
     val needJumpConfigUI: StateFlow<Boolean> get() = _needJumpConfigUI
 
+    var allPluginLoaded = AtomicBoolean(false)
+
     @Throws(InvalidKeyPluginException::class)
-    suspend fun init() {
-        ologger.info { "InitPluginManager" }
-        loadPlugins()
+    suspend fun initLoadedPlugins() {
+        ologger.info { "initLoadedPlugins" }
+        if (allPluginLoaded.value.not()) throw InvalidKeyPluginException("All plugins not loaded")
         selectConfigFromConfigFile()
         saveConfig()
     }
 
+    /**
+     * 加载插件
+     */
     @Throws(InvalidKeyPluginException::class)
-    private suspend fun loadPlugins() {
-        val preparePlugins = mutableMapOf<PluginMetadata, (metadata: PluginMetadata) -> PluginBasic>()
-        preparePlugins.putAll(getPlatformExtPlugins())
-        preparePlugins.putAll(getPlatformInnerPlugins())
-        val plugins = mutableMapOf<PluginMetadata, PluginBasic>()
-        for ((metadata, pluginCreator) in preparePlugins) {
-            if (metadata.supportPlatform.contains(OS.currentOS).not()) continue
-            val plugin = pluginCreator(metadata)
-            plugins[metadata] = plugin
-            plugin.load(PluginContextImpl(plugin.metadata))
-            PluginAbilityManager.registerPlugin(plugin)
-            when(plugin) {
-                is AbsCaptureScreenPlugin -> _availableCaptureScreenPlugins[metadata] = plugin
-                is AbsStoragePlugin -> _availableStoragePlugins[metadata] = plugin
-                is AbsOCRPlugin -> _availableOCRPlugins[metadata] = plugin
-                //TODO add new plugin type
-                else -> _allOtherPlugin[metadata] = plugin
+    suspend fun loadPlugins(): Result<Unit> {
+        return kotlin.runCatching {
+            ologger.info { "loadPlugins" }
+            val preparePlugins = mutableMapOf<PluginMetadata, (metadata: PluginMetadata) -> PluginBasic>()
+            preparePlugins.putAll(getPlatformExtPlugins())
+            preparePlugins.putAll(getPlatformInnerPlugins())
+            val plugins = mutableMapOf<PluginMetadata, PluginBasic>()
+            for ((metadata, pluginCreator) in preparePlugins) {
+                if (metadata.supportPlatform.contains(OS.currentOS).not()) continue
+                val plugin = pluginCreator(metadata)
+                plugins[metadata] = plugin
+                plugin.load(PluginContextImpl(plugin.metadata))
+                PluginAbilityManager.registerPlugin(plugin)
+                when(plugin) {
+                    is AbsCaptureScreenPlugin -> _availableCaptureScreenPlugins[metadata] = plugin
+                    is AbsStoragePlugin -> _availableStoragePlugins[metadata] = plugin
+                    is AbsOCRPlugin -> _availableOCRPlugins[metadata] = plugin
+                    //TODO add new plugin type
+                    else -> _allOtherPlugin[metadata] = plugin
+                }
             }
+            allPlugin.putAll(plugins)
+            ologger.info { "LoadPlugins" }
+            checkKeyPlugin()
+            allPluginLoaded.set(true)
         }
-        allPlugin.putAll(plugins)
-        ologger.info { "LoadPlugins" }
-        checkKeyPlugin()
     }
     @Throws(InvalidKeyPluginException::class)
     private fun checkKeyPlugin() {
@@ -76,7 +86,12 @@ object PluginManager {
             ologger.error {
                 errorMessage
             }
-            throw InvalidKeyPluginException(errorMessage)
+            throw InvalidKeyPluginException(
+                errorMessage,
+                AbsCaptureScreenPlugin::class to availableCaptureScreenPlugins.values,
+                AbsStoragePlugin::class to availableStoragePlugins.values,
+                AbsOCRPlugin::class to availableOCRPlugins.values
+            )
         }
     }
 

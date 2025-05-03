@@ -8,11 +8,9 @@ import io.github.octestx.basic.multiplatform.common.JVMInitCenter
 import io.github.octestx.basic.multiplatform.common.exceptions.SingleInstanceException
 import io.github.octestx.basic.multiplatform.common.utils.checkSelfIsSingleInstance
 import io.github.octestx.basic.multiplatform.ui.JVMUIInitCenter
-import io.github.octestx.krecall.plugins.PluginManager
 import io.github.octestx.krecall.plugins.basic.PluginBasicExt
 import io.github.octestx.krecall.plugins.basic.PluginEnvironment
 import io.github.octestx.krecall.plugins.basic.PluginMetadata
-import io.github.octestx.krecall.repository.ConfigManager
 import io.github.octestx.krecall.repository.FileTree
 import io.github.vinceglb.filekit.utils.toFile
 import io.klogging.noCoLogger
@@ -71,11 +69,6 @@ object Core {
                 JVMUIInitCenter.init(trayState)
 
                 FileTree.init()
-
-                PluginManager.init()
-                if (ConfigManager.config.initialized && ConfigManager.config.initPlugin) {
-                    PluginManager.initAllPlugins()
-                }
                 Result.success(Unit)
             } catch (e: Throwable) {
                 ologger.error(e) { "Init failed!" }

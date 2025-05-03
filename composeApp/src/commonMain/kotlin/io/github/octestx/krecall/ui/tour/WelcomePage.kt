@@ -1,10 +1,15 @@
 package io.github.octestx.krecall.ui.tour
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import io.github.octestx.basic.multiplatform.ui.ui.core.AbsUIPage
 import io.klogging.noCoLogger
 
@@ -12,13 +17,16 @@ class WelcomePage(model: WelcomePageModel): AbsUIPage<Any?, WelcomePage.PluginCo
     private val ologger = noCoLogger<WelcomePage>()
     @Composable
     override fun UI(state: PluginConfigState) {
-        Column {
-            Text("Welcome!")
+        Column(Modifier.padding(25.dp)) {
+            Text("Welcome!", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
             Text("This is KRecall.")
-            SelectionContainer {
-                Text("Please visit website: TODO")
+            Row {
+                Text("Please visit website: ")
+                SelectionContainer {
+                    Text("https://github.com/KRecall/KRecall", color = MaterialTheme.colorScheme.primary)
+                }
             }
-            Button(onClick = {
+            OutlinedButton(onClick = {
                 state.action(WelcomePageAction.Next)
             }) {
                 Text("Next")
