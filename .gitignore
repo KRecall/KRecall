@@ -16,3 +16,8 @@ captures
 !*.xcodeproj/project.xcworkspace/
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
+/output
+/Test
+/composeApp/KRecall-INIT.json
+/private-key.asc
+/private-key.asc.base64
